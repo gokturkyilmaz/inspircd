@@ -91,7 +91,7 @@
         name="penguin.omega.example.org"
 
         # description: Server description. Spaces are allowed.
-        description="Waddle World"
+        description="Test Server"
 
         # id: The SID to use for this server. This should not be uncommented
         # unless there is a SID conflict. This must be three characters long.
