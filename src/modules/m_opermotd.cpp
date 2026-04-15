@@ -1,7 +1,7 @@
 /*
  * InspIRCd -- Internet Relay Chat Daemon
  *
- *   Copyright (C) 2013, 2018-2020 Sadie Powell <sadie@witchery.services>
+ *   Copyright (C) 2013, 2018-2020, 2022 Sadie Powell <sadie@witchery.services>
  *   Copyright (C) 2012-2013, 2016 Attila Molnar <attilamolnar@hush.com>
  *   Copyright (C) 2012, 2019 Robby <robby@chatbelgie.be>
  *   Copyright (C) 2009-2010 Daniel De Graaf <danieldg@inspircd.org>
@@ -74,12 +74,8 @@ class CommandOpermotd : public Command
 		}
 
 		user->WriteRemoteNumeric(RPL_OMOTDSTART, "Server operators message of the day");
-
 		for (file_cache::const_iterator i = opermotd.begin(); i != opermotd.end(); ++i)
-		{
-			user->WriteRemoteNumeric(RPL_OMOTD, InspIRCd::Format(" %s", i->c_str()));
-		}
-
+			user->WriteRemoteNumeric(RPL_OMOTD, *i);
 		user->WriteRemoteNumeric(RPL_ENDOFOMOTD, "End of OPERMOTD");
 	}
 };
@@ -116,7 +112,19 @@ class ModuleOpermotd : public Module
 		try
 		{
 			FileReader reader(conf->getString("file", "opermotd", 1));
-			cmd.opermotd = reader.GetVector();
+
+			const file_cache& lines = reader.GetVector();
+
+			// Process the MOTD entry.
+			cmd.opermotd.reserve(lines.size());
+			for (file_cache::const_iterator it = lines.begin(); it != lines.end(); ++it)
+			{
+				// Some clients can not handle receiving RPL_OMOTD with an empty
+				// trailing parameter so if a line is empty we replace it with
+				// a single space.
+				const std::string& line = *it;
+				cmd.opermotd.push_back(line.empty() ? " " : line);
+			}
 			InspIRCd::ProcessColors(cmd.opermotd);
 		}
 		catch (CoreException&)

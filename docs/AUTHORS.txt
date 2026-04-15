@@ -1,11 +1,10 @@
-Since the first commit in January 2003 102 people have submitted patches,
+Since the first commit in January 2003 106 people have submitted patches,
 commits, and other useful contributions to InspIRCd. These people, ordered by
 the number of contributions they have made, are:
 
-
   * Craig Edwards <brain@inspircd.org>
-  * Attila Molnar <attilamolnar@hush.com>
   * Sadie Powell <sadie@witchery.services>
+  * Attila Molnar <attilamolnar@hush.com>
   * Robin Burchell <robin+git@viroteck.net>
   * Daniel De Graaf <danieldg@inspircd.org>
   * Dennis Friis <peavey@inspircd.org>
@@ -25,43 +24,43 @@ the number of contributions they have made, are:
   * burlex
   * jackmcbarn <jackmcbarn@inspircd.org>
   * Uli Schlachter <psychon@inspircd.org>
-  * ChrisTX <xpipe@hotmail.de>
   * B00mX0r <b00mx0r@aureus.pw>
+  * ChrisTX <xpipe@hotmail.de>
   * fez
   * Shawn Smith <ShawnSmith0828@gmail.com>
   * DjSlash <djslash@djslash.org>
   * blitmap <blitternet@gmail.com>
   * jamie
   * Justin Crawford <Justasic@Gmail.com>
+  * iwalkalone <iwalkalone69@gmail.com>
   * katsklaw
   * Dylan Frank <b00mx0r@aureus.pw>
-  * iwalkalone <iwalkalone69@gmail.com>
+  * Wade Cline <wadecline@hotmail.com>
   * Steven Van Acker <steven@singularity.be>
+  * Val Lorentz <progval+git@progval.net>
   * Dan Parsons <dparsons@nyip.net>
   * Googolplexed <googol@googolplexed.net>
   * Mantas Mikulėnas <grawity@gmail.com>
   * Renegade334 <contact.caaeed4f@renegade334.me.uk>
+  * satmd <satmd@satmd.de>
   * Sheogorath <sheogorath@shivering-isles.com>
-  * Wade Cline <wadecline@hotmail.com>
   * typobox43
   * Anatole Denis <natolumin@rezel.net>
   * Ben Harris <ben@tilde.team>
   * Chin Lee <kwangchin@gmail.com>
   * Christopher 'm4z' Holm <them4z@gmail.com>
+  * eggy
   * Guillaume Delacour <gui@iroqwa.org>
-  * JD Horelick <jdhore1@gmail.com>
   * James Lu <GLolol@overdrivenetworks.com>
+  * JD Horelick <jdhore1@gmail.com>
   * Jens Voss <DukePyrolator@anope.org>
   * Johanna A
   * Kyle Fuller <inbox@kylefuller.co.uk>
+  * md_5 <git@md-5.net>
   * Michael <michaelhazell@hotmail.com>
   * Michael Hazell <michaelhazell@hotmail.com>
   * Molly Miller
   * PhilSliderS
-  * Valentin Lorentz <progval+git@progval.net>
-  * eggy
-  * md_5 <git@md-5.net>
-  * satmd <satmd@satmd.de>
   * 0x277F <0x277F@gmail.com>
   * A_D
   * Adrien Bustany <adrien@bustany.org>
@@ -75,22 +74,32 @@ the number of contributions they have made, are:
   * Christos Triantafyllidis
   * David Lamont <del6597@rit.edu>
   * David Schultz <me@zpld.me>
+  * delthas
+  * edef <edef@edef.eu>
   * ElementalAlchemist <ElementAlchemist7@gmail.com>
   * Elizabeth Myers <elizabeth@interlinked.me>
+  * emerson <github@emersonveenstra.net>
   * Filippo Cortigiani <simos@simosnap.org>
   * Florian Praden <florian@praden.eu>
   * Garrett Holmstrom <gholms@fedoraproject.org>
+  * Hendrik Jäger <gitcommit@henk.geekmail.org>
   * Herman <GermanAizek@yandex.ru>
+  * James Wheare <james@wheare.org>
   * Joel Sing <joel@sing.id.au>
   * Jordyn/The Linux Geek <onlinecloud1@gmail.com>
   * Josh Soref
   * Julien Vehent <julien@linuxwall.info>
   * JustArchi <JustArchi@JustArchi.net>
   * Matthew Martin <phy1729@gmail.com>
+  * newuser1 <flirtex@gmail.com>
+  * nia <nia@netbsd.org>
+  * Nicole Kleinhoff <ilbelkyr@shalture.org>
   * Pierre Carrier <pierre@spotify.com>
   * Puck Meerburg <puck@puckipedia.com>
   * R-V6
+  * randomdan
   * Richard Bradfield <bradfirj@fstab.me>
+  * systocrat <systocrat@outlook.com>
   * ThatOneRoadie <thatoneroadie+github@gmail.com>
   * The Aviator <aviator45003@gmail.com>
   * Thiago Crepaldi <thiago@thiagocrepaldi.com>
@@ -98,9 +107,3 @@ the number of contributions they have made, are:
   * Tim Heckman <t@heckman.io>
   * Vitor Luis <droider.pc@gmail.com>
   * WindowsUser
-  * edef <edef@edef.eu>
-  * emerson <github@emersonveenstra.net>
-  * newuser1 <flirtex@gmail.com>
-  * nia <nia@netbsd.org>
-  * randomdan
-  * systocrat <systocrat@outlook.com>

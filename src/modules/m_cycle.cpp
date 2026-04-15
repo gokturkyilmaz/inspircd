@@ -2,7 +2,7 @@
  * InspIRCd -- Internet Relay Chat Daemon
  *
  *   Copyright (C) 2017 B00mX0r <b00mx0r@aureus.pw>
- *   Copyright (C) 2013, 2018, 2020 Sadie Powell <sadie@witchery.services>
+ *   Copyright (C) 2013, 2018, 2020, 2023 Sadie Powell <sadie@witchery.services>
  *   Copyright (C) 2012-2014, 2016 Attila Molnar <attilamolnar@hush.com>
  *   Copyright (C) 2012, 2019 Robby <robby@chatbelgie.be>
  *   Copyright (C) 2010 Craig Edwards <brain@inspircd.org>
@@ -62,7 +62,7 @@ class CommandCycle : public SplitCommand
 			if (channel->GetPrefixValue(user) < VOICE_VALUE && channel->IsBanned(user))
 			{
 				// User is banned, send an error and don't cycle them
-				user->WriteNotice("*** You may not cycle, as you are banned on channel " + channel->name);
+				user->WriteNumeric(ERR_BANNEDFROMCHAN, channel->name, "You may not cycle, as you are banned on channel " + channel->name);
 				return CMD_FAILURE;
 			}
 

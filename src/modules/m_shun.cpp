@@ -4,15 +4,14 @@
  *   Copyright (C) 2019 Matt Schatz <genius3000@g3k.solutions>
  *   Copyright (C) 2018 linuxdaemon <linuxdaemon.irc@gmail.com>
  *   Copyright (C) 2017 B00mX0r <b00mx0r@aureus.pw>
- *   Copyright (C) 2013, 2017-2018, 2020-2021 Sadie Powell <sadie@witchery.services>
+ *   Copyright (C) 2013, 2017-2018, 2020-2022 Sadie Powell <sadie@witchery.services>
  *   Copyright (C) 2012-2013, 2015-2016 Attila Molnar <attilamolnar@hush.com>
  *   Copyright (C) 2012, 2019 Robby <robby@chatbelgie.be>
  *   Copyright (C) 2012 Jens Voss <DukePyrolator@anope.org>
- *   Copyright (C) 2009 Uli Schlachter <psychon@inspircd.org>
  *   Copyright (C) 2009 John Brooks <special@inspircd.org>
  *   Copyright (C) 2009 Dennis Friis <peavey@inspircd.org>
  *   Copyright (C) 2009 Daniel De Graaf <danieldg@inspircd.org>
- *   Copyright (C) 2008-2010 Craig Edwards <brain@inspircd.org>
+ *   Copyright (C) 2008-2009 Craig Edwards <brain@inspircd.org>
  *   Copyright (C) 2008 Thomas Stagner <aquanight@inspircd.org>
  *   Copyright (C) 2008 Robin Burchell <robin+git@viroteck.net>
  *
@@ -62,16 +61,17 @@ class CommandShun : public Command
 	CommandShun(Module* Creator) : Command(Creator, "SHUN", 1, 3)
 	{
 		flags_needed = 'o';
-		syntax = "<nick!user@host> [<duration> :<reason>]";
+		syntax = "<nick!user@host>[,<nick!user@host>]+ [<duration> :<reason>]";
 	}
 
 	CmdResult Handle(User* user, const Params& parameters) CXX11_OVERRIDE
 	{
 		/* syntax: SHUN nick!user@host time :reason goes here */
 		/* 'time' is a human-readable timestring, like 2d3h2s. */
+		if (CommandParser::LoopCall(user, this, parameters, 0))
+			return CMD_SUCCESS;
 
 		std::string target = parameters[0];
-
 		User *find = ServerInstance->FindNick(target);
 		if ((find) && (find->registered == REG_ALL))
 			target = "*!" + find->GetBanIdent() + "@" + find->GetIPString();
@@ -114,17 +114,17 @@ class CommandShun : public Command
 				expr = parameters[1];
 			}
 
-			Shun* r = new Shun(ServerInstance->Time(), duration, user->nick.c_str(), expr.c_str(), target.c_str());
+			Shun* r = new Shun(ServerInstance->Time(), duration, user->nick, expr, target);
 			if (ServerInstance->XLines->AddLine(r, user))
 			{
 				if (!duration)
 				{
-					ServerInstance->SNO->WriteToSnoMask('x', "%s added permanent SHUN for %s: %s",
+					ServerInstance->SNO->WriteToSnoMask('x', "%s added a permanent SHUN on %s: %s",
 						user->nick.c_str(), target.c_str(), expr.c_str());
 				}
 				else
 				{
-					ServerInstance->SNO->WriteToSnoMask('x', "%s added timed SHUN for %s, expires in %s (on %s): %s",
+					ServerInstance->SNO->WriteToSnoMask('x', "%s added a timed SHUN on %s, expires in %s (on %s): %s",
 						user->nick.c_str(), target.c_str(), InspIRCd::DurationString(duration).c_str(),
 						InspIRCd::TimeString(ServerInstance->Time() + duration).c_str(), expr.c_str());
 				}

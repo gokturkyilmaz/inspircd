@@ -6,15 +6,14 @@
  *   Copyright (C) 2018 Matt Schatz <genius3000@g3k.solutions>
  *   Copyright (C) 2016 Johanna A
  *   Copyright (C) 2013-2016 Attila Molnar <attilamolnar@hush.com>
- *   Copyright (C) 2013, 2017, 2019-2021 Sadie Powell <sadie@witchery.services>
+ *   Copyright (C) 2013, 2017, 2019-2022 Sadie Powell <sadie@witchery.services>
  *   Copyright (C) 2012 Robby <robby@chatbelgie.be>
- *   Copyright (C) 2009 Uli Schlachter <psychon@inspircd.org>
  *   Copyright (C) 2009 Daniel De Graaf <danieldg@inspircd.org>
  *   Copyright (C) 2008-2009 Robin Burchell <robin+git@viroteck.net>
  *   Copyright (C) 2008 Pippijn van Steenhoven <pip88nl@gmail.com>
  *   Copyright (C) 2007 John Brooks <special@inspircd.org>
  *   Copyright (C) 2007 Dennis Friis <peavey@inspircd.org>
- *   Copyright (C) 2006-2008, 2010 Craig Edwards <brain@inspircd.org>
+ *   Copyright (C) 2006-2008 Craig Edwards <brain@inspircd.org>
  *
  * This file is part of InspIRCd.  InspIRCd is free software: you can
  * redistribute it and/or modify it under the terms of the GNU General Public
@@ -430,10 +429,8 @@ class ModuleHttpStats : public Module, public HTTPRequestEventListener
 
 		ServerInstance->Logs->Log(MODNAME, LOG_DEBUG, "Handling HTTP request for %s", http->GetPath().c_str());
 
-		bool found = true;
 		std::stringstream data;
 		data << "<inspircdstats>";
-
 		if (http->GetPath() == "/stats")
 		{
 			data << Stats::ServerInfo << Stats::General
@@ -454,21 +451,12 @@ class ModuleHttpStats : public Module, public HTTPRequestEventListener
 		}
 		else
 		{
-			found = false;
+			return MOD_RES_PASSTHRU;
 		}
-
-		if (found)
-		{
-			data << "</inspircdstats>";
-		}
-		else
-		{
-			data.clear();
-			data.str(std::string());
-		}
+		data << "</inspircdstats>";
 
 		/* Send the document back to m_httpd */
-		HTTPDocumentResponse response(this, *http, &data, found ? 200 : 404);
+		HTTPDocumentResponse response(this, *http, &data, 200);
 		response.headers.SetHeader("X-Powered-By", MODNAME);
 		response.headers.SetHeader("Content-Type", "text/xml");
 		API->SendResponse(response);

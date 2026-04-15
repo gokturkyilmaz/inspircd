@@ -6,7 +6,7 @@
 #   Copyright (C) 2015 Steven Van Acker <steven@singularity.be>
 #   Copyright (C) 2015 Attila Molnar <attilamolnar@hush.com>
 #   Copyright (C) 2014 Dan Parsons <dparsons@nyip.net>
-#   Copyright (C) 2013-2014, 2016-2017, 2019-2021 Sadie Powell <sadie@witchery.services>
+#   Copyright (C) 2013-2014, 2016-2017, 2019-2021, 2023 Sadie Powell <sadie@witchery.services>
 #   Copyright (C) 2012 Robby <robby@chatbelgie.be>
 #   Copyright (C) 2011 DjSlash <djslash@djslash.org>
 #   Copyright (C) 2009-2010 Daniel De Graaf <danieldg@inspircd.org>
@@ -69,8 +69,8 @@ my $executable	=	"inspircd";
 my $version	=	"@VERSION_FULL@";
 
 my @gdbargs = (
-	'--eval-command', 'handle SIGPIPE pass nostop noprint',
-	'--eval-command', 'handle SIGHUP pass nostop noprint',
+	'--eval-command', 'set pagination off',
+	'--eval-command', 'handle all nostop pass print',
 	'--eval-command', 'run',
 	'--args', "$binpath/$executable", qw(--nofork --nolog --debug)
 );
@@ -242,14 +242,13 @@ sub dev_valdebug(@)
 	print "$binpath/$executable doesn't exist\n" and return 0 unless(-e "$binpath/$executable");
 	print "$binpath/$executable is not executable\n" and return 0 unless(-f "$binpath/$executable" && -x "$binpath/$executable");
 
-	# Check we have valgrind and gdb
+	# Check we have valgrind
 	checkvalgrind();
-	checkgdb();
 
 	# If we are still alive here.. Try starting the IRCd..
 	# May want to do something with these args at some point: --suppressions=.inspircd.sup --gen-suppressions=yes
 	# Could be useful when we want to stop it complaining about things we're sure aren't issues.
-	exec qw(valgrind -v --tool=memcheck --leak-check=yes --db-attach=yes --num-callers=30), "$binpath/$executable", qw(--nofork --debug --nolog), @_;
+	exec qw(valgrind -v --tool=memcheck --leak-check=yes --num-callers=30), "$binpath/$executable", qw(--nofork --debug --nolog), @_;
 	die "Failed to start valgrind: $!\n";
 }
 
@@ -262,9 +261,8 @@ sub dev_valdebug_unattended(@)
 	print "$binpath/$executable doesn't exist\n" and return 0 unless(-e "$binpath/$executable");
 	print "$binpath/$executable is not executable\n" and return 0 unless(-f "$binpath/$executable" && -x "$binpath/$executable");
 
-	# Check we have valgrind and gdb
+	# Check we have valgrind
 	checkvalgrind();
-	checkgdb();
 
 	# If we are still alive here.. Try starting the IRCd..
 	#
@@ -306,7 +304,7 @@ sub dev_screenvaldebug(@)
 	# If we are still alive here.. Try starting the IRCd..
 	print "Starting InspIRCd in `screen`, type `screen -r` when the ircd crashes to view the valgrind and gdb output and get a backtrace.\n";
 	print "Once you're inside the screen session press ^C + d to re-detach from the session\n";
-	exec qw(screen -m -d valgrind -v --tool=memcheck --leak-check=yes --db-attach=yes --num-callers=30), "$binpath/$executable", qw(--nofork --debug --nolog), @_;
+	exec qw(screen -m -d valgrind -v --tool=memcheck --leak-check=yes --num-callers=30), "$binpath/$executable", qw(--nofork --debug --nolog), @_;
 	die "Failed to start screen: $!\n";
 }
 

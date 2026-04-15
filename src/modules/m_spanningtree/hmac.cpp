@@ -3,11 +3,9 @@
  *
  *   Copyright (C) 2014 Matthew Martin <phy1729@gmail.com>
  *   Copyright (C) 2013-2014 Attila Molnar <attilamolnar@hush.com>
- *   Copyright (C) 2013 Sadie Powell <sadie@witchery.services>
+ *   Copyright (C) 2013, 2024 Sadie Powell <sadie@witchery.services>
  *   Copyright (C) 2012 Robby <robby@chatbelgie.be>
- *   Copyright (C) 2010 Craig Edwards <brain@inspircd.org>
  *   Copyright (C) 2009-2010 Daniel De Graaf <danieldg@inspircd.org>
- *   Copyright (C) 2009 Uli Schlachter <psychon@inspircd.org>
  *   Copyright (C) 2008 Robin Burchell <robin+git@viroteck.net>
  *
  * This file is part of InspIRCd.  InspIRCd is free software: you can
@@ -79,7 +77,7 @@ bool TreeSocket::ComparePass(const Link& link, const std::string &theirs)
 	if (capab->auth_fingerprint)
 	{
 		/* Require fingerprint to exist and match */
-		if (link.Fingerprint != fp)
+		if (!InspIRCd::TimingSafeCompare(link.Fingerprint, fp))
 		{
 			ServerInstance->SNO->WriteToSnoMask('l',"Invalid SSL certificate fingerprint on link %s: need \"%s\" got \"%s\"",
 				link.Name.c_str(), link.Fingerprint.c_str(), fp.c_str());

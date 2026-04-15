@@ -3,17 +3,16 @@
  *
  *   Copyright (C) 2020 Matt Schatz <genius3000@g3k.solutions>
  *   Copyright (C) 2019 linuxdaemon <linuxdaemon.irc@gmail.com>
- *   Copyright (C) 2013-2014, 2016-2021 Sadie Powell <sadie@witchery.services>
+ *   Copyright (C) 2013-2014, 2016-2023 Sadie Powell <sadie@witchery.services>
  *   Copyright (C) 2013 Daniel Vassdal <shutter@canternet.org>
  *   Copyright (C) 2012-2017 Attila Molnar <attilamolnar@hush.com>
  *   Copyright (C) 2012-2013, 2016 Adam <Adam@anope.org>
  *   Copyright (C) 2012 Robby <robby@chatbelgie.be>
  *   Copyright (C) 2012 ChrisTX <xpipe@hotmail.de>
  *   Copyright (C) 2009-2010 Daniel De Graaf <danieldg@inspircd.org>
- *   Copyright (C) 2009 Uli Schlachter <psychon@inspircd.org>
  *   Copyright (C) 2008 Robin Burchell <robin+git@viroteck.net>
  *   Copyright (C) 2008 John Brooks <special@inspircd.org>
- *   Copyright (C) 2007-2008, 2010 Craig Edwards <brain@inspircd.org>
+ *   Copyright (C) 2007-2008 Craig Edwards <brain@inspircd.org>
  *   Copyright (C) 2007 Dennis Friis <peavey@inspircd.org>
  *   Copyright (C) 2006 Oliver Lupton <om@inspircd.org>
  *
@@ -40,6 +39,7 @@
 /// $PackageInfo: require_system("centos") gnutls-devel pkgconfig
 /// $PackageInfo: require_system("darwin") gnutls pkg-config
 /// $PackageInfo: require_system("debian") gnutls-bin libgnutls28-dev pkg-config
+/// $PackageInfo: require_system("rocky") gnutls-devel pkgconfig
 /// $PackageInfo: require_system("ubuntu") gnutls-bin libgnutls28-dev pkg-config
 
 #include "inspircd.h"
@@ -94,7 +94,7 @@
 # include <gcrypt.h>
 #endif
 
-#if INSPIRCD_GNUTLS_HAS_VERSION(3, 5, 6)
+#if INSPIRCD_GNUTLS_HAS_VERSION(3, 6, 0)
 # define GNUTLS_AUTO_DH
 #endif
 
@@ -198,9 +198,12 @@ namespace GnuTLS
 		{
 			// As older versions of gnutls can't do this, let's disable it where needed.
 #ifdef GNUTLS_HAS_MAC_GET_ID
+# if INSPIRCD_GNUTLS_HAS_VERSION(3, 2, 2)
+			hash = gnutls_digest_get_id(hashname.c_str());
+# else
 			// As gnutls_digest_algorithm_t and gnutls_mac_algorithm_t are mapped 1:1, we can do this
-			// There is no gnutls_dig_get_id() at the moment, but it may come later
 			hash = (gnutls_digest_algorithm_t)gnutls_mac_get_id(hashname.c_str());
+# endif
 			if (hash == GNUTLS_DIG_UNKNOWN)
 				throw Exception("Unknown hash type " + hashname);
 
@@ -875,11 +878,26 @@ class GnuTLSIOHook : public SSLIOHook
 			certinfo->fingerprint = BinToHex(buffer, buffer_size);
 		}
 
-		/* Beware here we do not check for errors.
-		 */
-		if ((gnutls_x509_crt_get_expiration_time(cert) < ServerInstance->Time()) || (gnutls_x509_crt_get_activation_time(cert) > ServerInstance->Time()))
+		certinfo->activation = gnutls_x509_crt_get_activation_time(cert);
+		if (certinfo->activation == -1)
 		{
-			certinfo->error = "Not activated, or expired certificate";
+			certinfo->activation = 0;
+			certinfo->error = "Unable to check certificate activation time";
+		}
+		else if (certinfo->activation >= ServerInstance->Time())
+		{
+			certinfo->error = "Certificate not activated";
+		}
+
+		certinfo->expiration = gnutls_x509_crt_get_expiration_time(cert);
+		if (certinfo->expiration == -1)
+		{
+			certinfo->expiration = 0;
+			certinfo->error = "Unable to check certificate expiration time";
+		}
+		else if (certinfo->expiration <= ServerInstance->Time())
+		{
+			certinfo->error = "Certificate has expired";
 		}
 
 info_done_dealloc:
@@ -1200,7 +1218,7 @@ info_done_dealloc:
 
 	bool GetServerName(std::string& out) const CXX11_OVERRIDE
 	{
-		std::vector<char> nameBuffer;
+		std::vector<char> nameBuffer(1);
 		size_t nameLength = 0;
 		unsigned int nameType = GNUTLS_NAME_DNS;
 
@@ -1282,6 +1300,7 @@ class ModuleSSLGnuTLS : public Module
 	// First member of the class, gets constructed first and destructed last
 	GnuTLS::Init libinit;
 	ProfileList profiles;
+	TR1NS::function<void(char*, size_t)> rememberer;
 
 	void ReadProfiles()
 	{
@@ -1355,6 +1374,7 @@ class ModuleSSLGnuTLS : public Module
 
  public:
 	ModuleSSLGnuTLS()
+		: rememberer(ServerInstance->GenRandom)
 	{
 #ifndef GNUTLS_HAS_RND
 		gcry_control (GCRYCTL_INITIALIZATION_FINISHED, 0);
@@ -1365,7 +1385,7 @@ class ModuleSSLGnuTLS : public Module
 	void init() CXX11_OVERRIDE
 	{
 		ServerInstance->Logs->Log(MODNAME, LOG_DEFAULT, "GnuTLS lib version %s module was compiled for " GNUTLS_VERSION, gnutls_check_version(NULL));
-		ServerInstance->GenRandom = RandGen::Call;
+		ServerInstance->GenRandom = &RandGen::Call;
 	}
 
 	void ReadConfig(ConfigStatus& status) CXX11_OVERRIDE
@@ -1393,7 +1413,7 @@ class ModuleSSLGnuTLS : public Module
 
 	~ModuleSSLGnuTLS()
 	{
-		ServerInstance->GenRandom = &InspIRCd::DefaultGenRandom;
+		ServerInstance->GenRandom = rememberer;
 	}
 
 	void OnCleanup(ExtensionItem::ExtensibleType type, Extensible* item) CXX11_OVERRIDE

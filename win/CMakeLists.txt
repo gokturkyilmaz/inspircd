@@ -1,4 +1,26 @@
-cmake_minimum_required(VERSION 2.8)
+#
+# InspIRCd -- Internet Relay Chat Daemon
+#
+#   Copyright (C) 2019 Robby <robby@chatbelgie.be>
+#   Copyright (C) 2015, 2018-2019, 2022 Sadie Powell <sadie@witchery.services>
+#   Copyright (C) 2013-2014, 2017 Adam <Adam@anope.org>
+#   Copyright (C) 2013-2014 Attila Molnar <attilamolnar@hush.com>
+#
+# This file is part of InspIRCd.  InspIRCd is free software: you can
+# redistribute it and/or modify it under the terms of the GNU General Public
+# License as published by the Free Software Foundation, version 2.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+# FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+# details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+
+cmake_minimum_required(VERSION 3.8 FATAL_ERROR)
 
 project(InspIRCd CXX)
 
@@ -39,7 +61,7 @@ if(MSVC)
 	set(CMAKE_MODULE_LINKER_FLAGS_MINSIZEREL "${CMAKE_MODULE_LINKER_FLAGS_MINSIZEREL} /SAFESEH:NO")
 	set(CMAKE_MODULE_LINKER_FLAGS_RELEASE "${CMAKE_MODULE_LINKER_FLAGS_RELEASE} /SAFESEH:NO")
 	set(CMAKE_MODULE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_MODULE_LINKER_FLAGS_RELWITHDEBINFO} /SAFESEH:NO")
-endif(MSVC)
+endif()
 
 file(GLOB INSPIRCD_SOURCES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
 "${INSPIRCD_BASE}/win/inspircd_win32wrapper.cpp"
@@ -62,7 +84,7 @@ link_directories(${EXTRA_LIBS})
 
 if(MSVC)
 	add_library(win32_memory STATIC "${INSPIRCD_BASE}/win/inspircd_memory_functions.cpp")
-endif(MSVC)
+endif()
 
 configure_file("${INSPIRCD_BASE}/win/inspircd.rc.cmake" "${INSPIRCD_BASE}/win/inspircd.rc")
 configure_file("${INSPIRCD_BASE}/make/template/config.h" "${INSPIRCD_BASE}/include/config.h")
@@ -70,7 +92,7 @@ configure_file("${INSPIRCD_BASE}/make/template/config.h" "${INSPIRCD_BASE}/inclu
 add_executable(inspircd ${INSPIRCD_SOURCES} "${INSPIRCD_BASE}/win/inspircd.rc")
 target_link_libraries(inspircd win32_memory)
 set_target_properties(inspircd PROPERTIES ENABLE_EXPORTS ON)
-install(TARGETS inspircd DESTINATION .)
+install(TARGETS inspircd RUNTIME DESTINATION .)
 
 add_subdirectory(modules)
 
@@ -79,12 +101,9 @@ file(GLOB EXTRA_DLLS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "${INSPIRCD_BASE}/win/
 install(FILES ${EXTRA_DLLS} DESTINATION .)
 
 # Install example configs
-file(GLOB_RECURSE EXAMPLE_CONFIGS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "${INSPIRCD_BASE}/docs/conf/*.example")
-install(FILES ${EXAMPLE_CONFIGS} DESTINATION conf)
-
-# Install nationalchars files
-file(GLOB_RECURSE EXAMPLE_LOCALES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "${INSPIRCD_BASE}/locales/*")
-install(FILES ${EXAMPLE_LOCALES} DESTINATION locales)
+install(DIRECTORY "${INSPIRCD_BASE}/docs/conf/" DESTINATION "${CONFIG_DIR}/examples")
+install(DIRECTORY "${INSPIRCD_BASE}/docs/sql/" DESTINATION "${CONFIG_DIR}/sql")
+install(DIRECTORY "${INSPIRCD_BASE}/locales/" DESTINATION "${CONFIG_DIR}/locales")
 
 # Create an empty data and logs directory and install them
 file(MAKE_DIRECTORY ${DATA_DIR})
@@ -115,4 +134,4 @@ if(EXISTS "${CMAKE_ROOT}/Modules/CPack.cmake")
 	set(CPACK_NSIS_COMPRESSOR "/SOLID zlib")
 
 	include(CPack)
-endif(EXISTS "${CMAKE_ROOT}/Modules/CPack.cmake")
+endif()

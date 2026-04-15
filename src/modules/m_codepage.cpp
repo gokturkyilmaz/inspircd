@@ -1,7 +1,7 @@
 /*
  * InspIRCd -- Internet Relay Chat Daemon
  *
- *   Copyright (C) 2020-2021 Sadie Powell <sadie@witchery.services>
+ *   Copyright (C) 2020-2022 Sadie Powell <sadie@witchery.services>
  *
  * This file is part of InspIRCd.  InspIRCd is free software: you can
  * redistribute it and/or modify it under the terms of the GNU General Public
@@ -79,17 +79,95 @@ class ModuleCodepage
 		hashmap.swap(newhash);
 	}
 
+	void DestroyChannel(Channel* chan)
+	{
+		// Remove all of the users from the channel. Using KICK here will mean
+		// the user's client will probably attempt to rejoin and will enter the
+		// succeeding channel. Unfortunately this is the best we can do for now.
+		while (!chan->userlist.empty())
+			chan->KickUser(ServerInstance->FakeClient, chan->userlist.begin(), "This channel does not exist anymore.");
+
+		// Remove all modes from the channel just in case one of them keeps the channel open.
+		Modes::ChangeList changelist;
+		const ModeParser::ModeHandlerMap& chanmodes = ServerInstance->Modes->GetModes(MODETYPE_CHANNEL);
+		for (ModeParser::ModeHandlerMap::const_iterator i = chanmodes.begin(); i != chanmodes.end(); ++i)
+			i->second->RemoveMode(chan, changelist);
+		ServerInstance->Modes->Process(ServerInstance->FakeClient, chan, NULL, changelist, ModeParser::MODE_LOCALONLY);
+
+		// The channel will be destroyed automatically by CheckDestroy.
+	}
+
+	void ChangeNick(User* user, const std::string& message)
+	{
+		user->WriteNumeric(RPL_SAVENICK, user->uuid, message);
+		user->ChangeNick(user->uuid);
+	}
+
+	void CheckDuplicateChan()
+	{
+		chan_hash duplicates;
+		const chan_hash& chans = ServerInstance->GetChans();
+		for (chan_hash::const_iterator iter = chans.begin(); iter != chans.end(); ++iter)
+		{
+			Channel* chan = iter->second;
+			std::pair<chan_hash::iterator, bool> check = duplicates.insert(std::make_pair(chan->name, chan));
+			if (check.second)
+				continue; // No duplicate.
+
+			Channel* otherchan = check.first->second;
+			if (otherchan->age < chan->age)
+			{
+				// The other channel was created first.
+				DestroyChannel(chan);
+			}
+			else if (otherchan->age > chan->age)
+			{
+				// The other channel was created last.
+				DestroyChannel(otherchan);
+				check.first->second = chan;
+			}
+			else
+			{
+				// Both created at the same time.
+				DestroyChannel(chan);
+				DestroyChannel(otherchan);
+				duplicates.erase(check.first);
+			}
+		}
+	}
+
 	void CheckDuplicateNick()
 	{
-		insp::flat_set<std::string, irc::insensitive_swo> duplicates;
-		const UserManager::LocalList& list = ServerInstance->Users.GetLocalUsers();
-		for (UserManager::LocalList::const_iterator iter = list.begin(); iter != list.end(); ++iter)
+		user_hash duplicates;
+		const user_hash& users = ServerInstance->Users->GetUsers();
+		for (user_hash::const_iterator iter = users.begin(); iter != users.end(); ++iter)
 		{
-			LocalUser* user = *iter;
-			if (user->nick != user->uuid && !duplicates.insert(user->nick).second)
+			User* user = iter->second;
+			if (user->nick == user->uuid)
+				continue; // UUID users are always unique.
+
+			std::pair<user_hash::iterator, bool> check = duplicates.insert(std::make_pair(user->nick, user));
+			if (check.second)
+				continue; // No duplicate.
+
+			User* otheruser = check.first->second;
+			if (otheruser->age < user->age)
 			{
-				user->WriteNumeric(RPL_SAVENICK, user->uuid, "Your nickname is no longer available.");
-				user->ChangeNick(user->uuid);
+				// The other user connected first.
+				ChangeNick(user, "Your nickname is no longer available.");
+			}
+			else if (otheruser->age > user->age)
+			{
+				// The other user connected last.
+				ChangeNick(otheruser, "Your nickname is no longer available.");
+				check.first->second = user;
+			}
+			else
+			{
+				// Both connected at the same time.
+				ChangeNick(user, "Your nickname is no longer available.");
+				ChangeNick(otheruser, "Your nickname is no longer available.");
+				duplicates.erase(check.first);
 			}
 		}
 	}
@@ -101,10 +179,7 @@ class ModuleCodepage
 		{
 			LocalUser* user = *iter;
 			if (user->nick != user->uuid && !ServerInstance->IsNick(user->nick))
-			{
-				user->WriteNumeric(RPL_SAVENICK, user->uuid, "Your nickname is no longer valid.");
-				user->ChangeNick(user->uuid);
-			}
+				ChangeNick(user, "Your nickname is no longer valid.");
 		}
 	}
 
@@ -133,6 +208,7 @@ class ModuleCodepage
 
 		ServerInstance->Config->CaseMapping = origcasemapname;
 		national_case_insensitive_map = origcasemap;
+		CheckDuplicateChan();
 		CheckDuplicateNick();
 		CheckRehash(casemap);
 
@@ -215,6 +291,8 @@ class ModuleCodepage
 
 		ServerInstance->Config->CaseMapping = name;
 		national_case_insensitive_map = casemap;
+		CheckDuplicateChan();
+		CheckDuplicateNick();
 		CheckRehash(newcasemap);
 
 		ServerInstance->ISupport.Build();

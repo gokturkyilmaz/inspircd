@@ -1,11 +1,11 @@
 /*
  * InspIRCd -- Internet Relay Chat Daemon
  *
- *   Copyright (C) 2013, 2017-2018, 2020-2021 Sadie Powell <sadie@witchery.services>
+ *   Copyright (C) 2013, 2017-2018, 2020-2022, 2024 Sadie Powell <sadie@witchery.services>
  *   Copyright (C) 2012-2016 Attila Molnar <attilamolnar@hush.com>
  *   Copyright (C) 2012 Robby <robby@chatbelgie.be>
  *   Copyright (C) 2009 Daniel De Graaf <danieldg@inspircd.org>
- *   Copyright (C) 2008, 2010 Craig Edwards <brain@inspircd.org>
+ *   Copyright (C) 2008 Craig Edwards <brain@inspircd.org>
  *   Copyright (C) 2007-2008 Robin Burchell <robin+git@viroteck.net>
  *
  * This file is part of InspIRCd.  InspIRCd is free software: you can
@@ -93,7 +93,7 @@ class ModuleServProtectMode CXX11_FINAL
 				if ((u->IsModeSet(bm)) && (memb) && (memb->HasMode(pm)))
 				{
 					/* BZZZT, Denied! */
-					user->WriteNumeric(ERR_CHANOPRIVSNEEDED, chan->name, InspIRCd::Format("You are not permitted to remove privileges from %s services", ServerInstance->Config->Network.c_str()));
+					user->WriteNumeric(ERR_RESTRICTED, chan->name, InspIRCd::Format("You are not permitted to remove privileges from %s services", ServerInstance->Config->Network.c_str()));
 					return MOD_RES_DENY;
 				}
 			}
@@ -129,7 +129,10 @@ class ModuleServProtectMode CXX11_FINAL
 
 	ModResult OnWhoisLine(Whois::Context& whois, Numeric::Numeric& numeric) CXX11_OVERRIDE
 	{
-		return ((numeric.GetNumeric() == RPL_WHOISCHANNELS) && whois.GetTarget()->IsModeSet(bm)) ? MOD_RES_DENY : MOD_RES_PASSTHRU;
+		if (numeric.GetNumeric() != RPL_WHOISCHANNELS && numeric.GetNumeric() != RPL_CHANNELSMSG)
+			return MOD_RES_PASSTHRU;
+
+		return whois.GetTarget()->IsModeSet(bm) ? MOD_RES_DENY : MOD_RES_PASSTHRU;
 	}
 };
 

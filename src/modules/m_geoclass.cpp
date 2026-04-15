@@ -1,7 +1,7 @@
 /*
  * InspIRCd -- Internet Relay Chat Daemon
  *
- *   Copyright (C) 2019-2020 Sadie Powell <sadie@witchery.services>
+ *   Copyright (C) 2019-2020, 2023 Sadie Powell <sadie@witchery.services>
  *
  * This file is part of InspIRCd.  InspIRCd is free software: you can
  * redistribute it and/or modify it under the terms of the GNU General Public
@@ -60,6 +60,13 @@ class ModuleGeoClass
 		irc::spacesepstream codes(country);
 		for (std::string token; codes.GetToken(token); )
 		{
+			if (token.length() != 2)
+			{
+				ServerInstance->Logs->Log("CONNECTCLASS", LOG_DEBUG, "The %s connect class contains an invalid country code: %s",
+					myclass->GetName().c_str(), token.c_str());
+				continue;
+			}
+
 			// If the user matches this country code then they can use this
 			// connect class.
 			if (stdalgo::string::equalsci(token, code))

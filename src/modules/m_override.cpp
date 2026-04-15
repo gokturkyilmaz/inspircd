@@ -6,16 +6,15 @@
  *   Copyright (C) 2017 B00mX0r <b00mx0r@aureus.pw>
  *   Copyright (C) 2017 Adam <Adam@anope.org>
  *   Copyright (C) 2016 Sheogorath <sheogorath@shivering-isles.com>
- *   Copyright (C) 2013, 2017, 2020-2021 Sadie Powell <sadie@witchery.services>
+ *   Copyright (C) 2013, 2017, 2020-2022 Sadie Powell <sadie@witchery.services>
  *   Copyright (C) 2013 Daniel Vassdal <shutter@canternet.org>
  *   Copyright (C) 2012-2015 Attila Molnar <attilamolnar@hush.com>
  *   Copyright (C) 2012 Shawn Smith <ShawnSmith0828@gmail.com>
  *   Copyright (C) 2012 Robby <robby@chatbelgie.be>
  *   Copyright (C) 2009-2010 Daniel De Graaf <danieldg@inspircd.org>
- *   Copyright (C) 2009 Uli Schlachter <psychon@inspircd.org>
  *   Copyright (C) 2008 Robin Burchell <robin+git@viroteck.net>
  *   Copyright (C) 2007-2008 Dennis Friis <peavey@inspircd.org>
- *   Copyright (C) 2004, 2006, 2008, 2010 Craig Edwards <brain@inspircd.org>
+ *   Copyright (C) 2004, 2006, 2008 Craig Edwards <brain@inspircd.org>
  *
  * This file is part of InspIRCd.  InspIRCd is free software: you can
  * redistribute it and/or modify it under the terms of the GNU General Public
@@ -34,14 +33,55 @@
 #include "inspircd.h"
 #include "modules/invite.h"
 
+class UnsetTimer CXX11_FINAL
+	: public Timer
+{
+ private:
+	ModeHandler& overridemode;
+	LocalUser* user;
+
+ public:
+	UnsetTimer(LocalUser* u, unsigned long timeout, ModeHandler& om)
+		: Timer(timeout, false)
+		, overridemode(om)
+		, user(u)
+	{
+		ServerInstance->Timers.AddTimer(this);
+	}
+
+	bool Tick(time_t time) CXX11_OVERRIDE
+	{
+		if (!user->quitting && user->IsModeSet(overridemode))
+		{
+			Modes::ChangeList changelist;
+			changelist.push_remove(&overridemode);
+			ServerInstance->Modes.Process(ServerInstance->FakeClient, NULL, user, changelist);
+		}
+		return false;
+	}
+};
+
 class Override : public SimpleUserModeHandler
 {
  public:
-	Override(Module* Creator) : SimpleUserModeHandler(Creator, "override", 'O')
+	SimpleExtItem<UnsetTimer> ext;
+	unsigned long timeout;
+
+	Override(Module* Creator)
+		: SimpleUserModeHandler(Creator, "override", 'O')
+		, ext("override-timer", ExtensionItem::EXT_USER, Creator)
 	{
 		oper = true;
 		if (!ServerInstance->Config->ConfValue("override")->getBool("enableumode"))
 			DisableAutoRegister();
+	}
+
+	ModeAction OnModeChange(User* source, User* dest, Channel* channel, std::string& parameter, bool adding) CXX11_OVERRIDE
+	{
+		ModeAction res = SimpleUserModeHandler::OnModeChange(source, dest, channel, parameter, adding);
+		if (adding && res == MODEACTION_ALLOW && IS_LOCAL(dest) && timeout)
+			ext.set(dest, new UnsetTimer(IS_LOCAL(dest), timeout, *this));
+		return res;
 	}
 };
 
@@ -107,6 +147,7 @@ class ModuleOverride : public Module
 		ConfigTag* tag = ServerInstance->Config->ConfValue("override");
 		NoisyOverride = tag->getBool("noisy");
 		RequireKey = tag->getBool("requirekey");
+		ou.timeout = tag->getDuration("timeout", 0);
 	}
 
 	void On005Numeric(std::map<std::string, std::string>& tokens) CXX11_OVERRIDE

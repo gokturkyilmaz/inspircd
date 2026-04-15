@@ -4,7 +4,7 @@
  *   Copyright (C) 2019 linuxdaemon <linuxdaemon.irc@gmail.com>
  *   Copyright (C) 2018 systocrat <systocrat@outlook.com>
  *   Copyright (C) 2018 Dylan Frank <b00mx0r@aureus.pw>
- *   Copyright (C) 2013, 2016-2021 Sadie Powell <sadie@witchery.services>
+ *   Copyright (C) 2013, 2016-2023 Sadie Powell <sadie@witchery.services>
  *   Copyright (C) 2013 Daniel Vassdal <shutter@canternet.org>
  *   Copyright (C) 2013 ChrisTX <xpipe@hotmail.de>
  *   Copyright (C) 2013 Adam <Adam@anope.org>
@@ -13,7 +13,6 @@
  *   Copyright (C) 2012 DjSlash <djslash@djslash.org>
  *   Copyright (C) 2011 jackmcbarn <jackmcbarn@inspircd.org>
  *   Copyright (C) 2009-2010 Daniel De Graaf <danieldg@inspircd.org>
- *   Copyright (C) 2009 Uli Schlachter <psychon@inspircd.org>
  *   Copyright (C) 2008 Thomas Stagner <aquanight@inspircd.org>
  *   Copyright (C) 2008 John Brooks <special@inspircd.org>
  *   Copyright (C) 2007, 2009 Dennis Friis <peavey@inspircd.org>
@@ -399,7 +398,7 @@ void User::Oper(OperInfo* info)
 	this->oper = info;
 
 	LocalUser* localuser = IS_LOCAL(this);
-	if (localuser)
+	if (localuser && opermh)
 	{
 		Modes::ChangeList changelist;
 		changelist.push_add(opermh);
@@ -611,7 +610,7 @@ void LocalUser::FullConnect()
 
 	FOREACH_MOD(OnPostConnect, (this));
 
-	ServerInstance->SNO->WriteToSnoMask('c',"Client connecting on port %d (class %s): %s (%s) [%s]",
+	ServerInstance->SNO->WriteToSnoMask('c',"Client connecting on port %d (class %s): %s (%s) [%s\x0F]",
 		this->server_sa.port(), this->MyClass->name.c_str(), GetFullRealHost().c_str(), this->GetIPString().c_str(), this->GetRealName().c_str());
 	ServerInstance->Logs->Log("BANCACHE", LOG_DEBUG, "BanCache: Adding NEGATIVE hit for " + this->GetIPString());
 	ServerInstance->BanCache.AddHit(this->GetIPString(), "", "");
@@ -765,7 +764,7 @@ irc::sockets::cidr_mask User::GetCIDRMask()
 bool User::SetClientIP(const std::string& address)
 {
 	irc::sockets::sockaddrs sa;
-	if (!irc::sockets::aptosa(address, client_sa.port(), sa))
+	if (!irc::sockets::aptosa(address, client_sa.family() == AF_UNSPEC ? 0 : client_sa.port(), sa))
 		return false;
 
 	User::SetClientIP(sa);
@@ -774,7 +773,7 @@ bool User::SetClientIP(const std::string& address)
 
 void User::SetClientIP(const irc::sockets::sockaddrs& sa)
 {
-	const std::string oldip(GetIPString());
+	const std::string oldip(client_sa.family() == AF_UNSPEC ? "" : GetIPString());
 	memcpy(&client_sa, &sa, sizeof(irc::sockets::sockaddrs));
 	this->InvalidateCache();
 
@@ -1083,7 +1082,10 @@ void User::ChangeRealHost(const std::string& host, bool resetdisplay)
 	// If we are just resetting the display host then we don't need to
 	// do anything else.
 	if (!changehost)
+	{
+		InvalidateCache();
 		return;
+	}
 
 	// Don't call the OnChangeRealHost event when initialising a user.
 	const bool initializing = realhost.empty();

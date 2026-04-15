@@ -1,7 +1,7 @@
 /*
  * InspIRCd -- Internet Relay Chat Daemon
  *
- *   Copyright (C) 2017, 2021 Sadie Powell <sadie@witchery.services>
+ *   Copyright (C) 2017, 2021-2022 Sadie Powell <sadie@witchery.services>
  *
  * This file is part of InspIRCd.  InspIRCd is free software: you can
  * redistribute it and/or modify it under the terms of the GNU General Public
@@ -24,11 +24,14 @@
 class CoreExport TokenList
 {
  private:
+	/** The underlying type of the token list. */
+	typedef insp::flat_set<std::string, irc::insensitive_swo> TokenMap;
+
 	/** Whether this list includes all tokens by default. */
 	bool permissive;
 
 	/** Either the tokens to exclude if in permissive mode or the tokens to include if in strict mode. */
-	insp::flat_set<std::string, irc::insensitive_swo> tokens;
+	TokenMap tokens;
 
  public:
 	TokenList()

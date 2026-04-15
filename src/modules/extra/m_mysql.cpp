@@ -2,16 +2,15 @@
  * InspIRCd -- Internet Relay Chat Daemon
  *
  *   Copyright (C) 2019 linuxdaemon <linuxdaemon.irc@gmail.com>
- *   Copyright (C) 2016 Adam <Adam@anope.org>
  *   Copyright (C) 2015 Daniel Vassdal <shutter@canternet.org>
  *   Copyright (C) 2013-2014 Attila Molnar <attilamolnar@hush.com>
- *   Copyright (C) 2013, 2016-2021 Sadie Powell <sadie@witchery.services>
+ *   Copyright (C) 2013, 2016-2024 Sadie Powell <sadie@witchery.services>
  *   Copyright (C) 2012 Robby <robby@chatbelgie.be>
  *   Copyright (C) 2012 ChrisTX <xpipe@hotmail.de>
  *   Copyright (C) 2009-2010 Daniel De Graaf <danieldg@inspircd.org>
  *   Copyright (C) 2009 Uli Schlachter <psychon@inspircd.org>
  *   Copyright (C) 2007, 2009 Dennis Friis <peavey@inspircd.org>
- *   Copyright (C) 2005, 2008-2010 Craig Edwards <brain@inspircd.org>
+ *   Copyright (C) 2005, 2008-2009 Craig Edwards <brain@inspircd.org>
  *
  * This file is part of InspIRCd.  InspIRCd is free software: you can
  * redistribute it and/or modify it under the terms of the GNU General Public
@@ -30,10 +29,10 @@
 /// $LinkerFlags: execute("mysql_config --libs_r" "MYSQL_LDFLAGS" "-lmysqlclient")
 
 /// $PackageInfo: require_system("arch") mariadb-libs
-/// $PackageInfo: require_system("centos" "6.0" "6.99") mysql-devel
-/// $PackageInfo: require_system("centos" "7.0") mariadb-devel
-/// $PackageInfo: require_system("darwin") mysql-connector-c
+/// $PackageInfo: require_system("centos") mysql-devel
+/// $PackageInfo: require_system("darwin") mysql-client
 /// $PackageInfo: require_system("debian") libmysqlclient-dev
+/// $PackageInfo: require_system("rocky") mysql-devel
 /// $PackageInfo: require_system("ubuntu") libmysqlclient-dev
 
 #ifdef __GNUC__
@@ -63,7 +62,7 @@
 #endif
 
 #ifdef _WIN32
-# pragma comment(lib, "mysqlclient.lib")
+# pragma comment(lib, "libmysql.lib")
 #endif
 
 /* VERSION 3 API: With nonblocking (threaded) requests */
@@ -335,11 +334,23 @@ class SQLConnection : public SQL::Provider
 	// true upon success.
 	bool Connect()
 	{
+		if (connection)
+		{
+			mysql_close(connection);
+			connection = NULL;
+		}
+
 		connection = mysql_init(connection);
 
 		// Set the connection timeout.
 		unsigned int timeout = config->getDuration("timeout", 5, 1, 30);
 		mysql_options(connection, MYSQL_OPT_CONNECT_TIMEOUT, &timeout);
+
+		// Enable SSL if requested.
+#if defined LIBMYSQL_VERSION_ID && LIBMYSQL_VERSION_ID > 80000
+		unsigned int ssl = config->getBool("ssl") ? SSL_MODE_REQUIRED : SSL_MODE_PREFERRED;
+		mysql_options(connection, MYSQL_OPT_SSL_MODE, &ssl);
+#endif
 
 		// Attempt to connect to the database.
 		const std::string host = config->getString("host");

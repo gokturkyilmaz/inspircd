@@ -2,7 +2,7 @@
  * InspIRCd -- Internet Relay Chat Daemon
  *
  *   Copyright (C) 2014 Justin Crawford <Justasic@Gmail.com>
- *   Copyright (C) 2013-2014, 2017-2021 Sadie Powell <sadie@witchery.services>
+ *   Copyright (C) 2013-2014, 2017-2022 Sadie Powell <sadie@witchery.services>
  *   Copyright (C) 2013-2014, 2016 Attila Molnar <attilamolnar@hush.com>
  *   Copyright (C) 2012, 2019 Robby <robby@chatbelgie.be>
  *   Copyright (C) 2012, 2014 Adam <Adam@anope.org>
@@ -73,7 +73,8 @@ static bool WriteDatabase(PermChannel& permchanmode, Module* mod, bool save_list
 	if (permchannelsconf.empty())
 		return true;
 
-	std::string permchannelsnewconf = permchannelsconf + ".tmp";
+
+	const std::string permchannelsnewconf = permchannelsconf + ".new." + ConvToStr(ServerInstance->Time());
 	std::ofstream stream(permchannelsnewconf.c_str());
 	if (!stream.is_open())
 	{
@@ -141,11 +142,15 @@ static bool WriteDatabase(PermChannel& permchanmode, Module* mod, bool save_list
 		}
 
 		stream << "<permchannels channel=\"" << ServerConfig::Escape(chan->name)
-			<< "\" ts=\"" << chan->age
-			<< "\" topic=\"" << ServerConfig::Escape(chan->topic)
-			<< "\" topicts=\"" << chan->topicset
-			<< "\" topicsetby=\"" << ServerConfig::Escape(chan->setby)
-			<< "\" modes=\"" << ServerConfig::Escape(chanmodes)
+			<< "\" ts=\"" << chan->age;
+		if (!chan->topic.empty())
+		{
+			// Only store the topic if one is set.
+			stream << "\" topic=\"" << ServerConfig::Escape(chan->topic)
+				<< "\" topicts=\"" << chan->topicset
+				<< "\" topicsetby=\"" << ServerConfig::Escape(chan->setby);
+		}
+		stream << "\" modes=\"" << ServerConfig::Escape(chanmodes)
 			<< "\">" << std::endl;
 	}
 

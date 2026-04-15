@@ -2,7 +2,7 @@
  * InspIRCd -- Internet Relay Chat Daemon
  *
  *   Copyright (C) 2020 Matt Schatz <genius3000@g3k.solutions>
- *   Copyright (C) 2017-2021 Sadie Powell <sadie@witchery.services>
+ *   Copyright (C) 2017-2022 Sadie Powell <sadie@witchery.services>
  *
  * This file is part of InspIRCd.  InspIRCd is free software: you can
  * redistribute it and/or modify it under the terms of the GNU General Public
@@ -28,6 +28,7 @@ class STSCap : public Cap::Capability
 	std::string host;
 	std::string plaintextpolicy;
 	std::string securepolicy;
+	mutable UserCertificateAPI sslapi;
 
 	bool OnList(LocalUser* user) CXX11_OVERRIDE
 	{
@@ -64,12 +65,19 @@ class STSCap : public Cap::Capability
 
 	const std::string* GetValue(LocalUser* user) const CXX11_OVERRIDE
 	{
-		return SSLIOHook::IsSSL(&user->eh) ? &securepolicy : &plaintextpolicy;
+		if (SSLIOHook::IsSSL(&user->eh))
+			return &securepolicy; // Normal SSL connection.
+
+		if (sslapi && sslapi->GetCertificate(user))
+			return &securepolicy; // Proxied SSL connection.
+
+		return &plaintextpolicy; // Plain text connection.
 	}
 
  public:
 	STSCap(Module* mod)
 		: Cap::Capability(mod, "sts")
+		, sslapi(mod)
 	{
 		DisableAutoRegister();
 	}
@@ -136,6 +144,10 @@ class ModuleIRCv3STS : public Module
 		{
 			ListenSocket* ls = *iter;
 
+			// Is this listener marked as providing SSL over HAProxy?
+			if (!ls->bind_tag->getString("hook").empty() && ls->bind_tag->getBool("sslhook"))
+				return true;
+
 			// Is this listener on the right port?
 			unsigned int saport = ls->bind_sa.port();
 			if (saport != port)
@@ -168,7 +180,7 @@ class ModuleIRCv3STS : public Module
 		if (host.empty())
 			throw ModuleException("<sts:host> must contain a hostname, at " + tag->getTagLocation());
 
-		unsigned int port = tag->getUInt("port", 0, 0, UINT16_MAX);
+		unsigned int port = tag->getUInt("port", 6697, 1, 65535);
 		if (!HasValidSSLPort(port))
 			throw ModuleException("<sts:port> must be a TLS port, at " + tag->getTagLocation());
 

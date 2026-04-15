@@ -5,7 +5,6 @@
  *   Copyright (C) 2012-2016 Attila Molnar <attilamolnar@hush.com>
  *   Copyright (C) 2012-2013, 2017, 2019-2020 Sadie Powell <sadie@witchery.services>
  *   Copyright (C) 2012 Robby <robby@chatbelgie.be>
- *   Copyright (C) 2010 Craig Edwards <brain@inspircd.org>
  *   Copyright (C) 2009 Daniel De Graaf <danieldg@inspircd.org>
  *   Copyright (C) 2008 Thomas Stagner <aquanight@inspircd.org>
  *   Copyright (C) 2008 Robin Burchell <robin+git@viroteck.net>
@@ -141,6 +140,9 @@ class CoreExport UserManager : public fakederef<UserManager>
 	/** Rebuild clone counts. Required when \<cidr> settings change.
 	 */
 	void RehashCloneCounts();
+
+	/** Rebuilds the list of services servers. Required when \<uline> settings change. */
+	void RehashULines();
 
 	/** Return the number of local and global clones of this user
 	 * @param user The user to get the clone counts for

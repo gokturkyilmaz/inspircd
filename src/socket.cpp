@@ -3,11 +3,10 @@
  *
  *   Copyright (C) 2019 linuxdaemon <linuxdaemon.irc@gmail.com>
  *   Copyright (C) 2013-2014 Attila Molnar <attilamolnar@hush.com>
- *   Copyright (C) 2013, 2017-2021 Sadie Powell <sadie@witchery.services>
+ *   Copyright (C) 2013, 2017-2022 Sadie Powell <sadie@witchery.services>
  *   Copyright (C) 2013 Daniel Vassdal <shutter@canternet.org>
  *   Copyright (C) 2012 Robby <robby@chatbelgie.be>
  *   Copyright (C) 2009-2011 Daniel De Graaf <danieldg@inspircd.org>
- *   Copyright (C) 2009 Uli Schlachter <psychon@inspircd.org>
  *   Copyright (C) 2008 Thomas Stagner <aquanight@inspircd.org>
  *   Copyright (C) 2007 John Brooks <special@inspircd.org>
  *   Copyright (C) 2007 Dennis Friis <peavey@inspircd.org>
@@ -402,20 +401,24 @@ std::string irc::sockets::cidr_mask::str() const
 
 	unsigned char* base;
 	size_t len;
+	unsigned char maxlen;
 	switch (type)
 	{
 		case AF_INET:
 			base = (unsigned char*)&sa.in4.sin_addr;
 			len = 4;
+			maxlen = 32;
 			break;
 
 		case AF_INET6:
 			base = (unsigned char*)&sa.in6.sin6_addr;
 			len = 16;
+			maxlen = 128;
 			break;
 
 		case AF_UNIX:
-			return sa.un.sun_path;
+			// TODO: make bits a vector<uint8_t> so we can return the actual path here.
+			return "/*";
 
 		default:
 			// If we have reached this point then we have encountered a bug.
@@ -424,7 +427,14 @@ std::string irc::sockets::cidr_mask::str() const
 	}
 
 	memcpy(base, bits, len);
-	return sa.addr() + "/" + ConvToStr((int)length);
+
+	std::string value = sa.addr();
+	if (length < maxlen)
+	{
+		value.push_back('/');
+		value.append(ConvToStr(static_cast<uint16_t>(length)));
+	}
+	return value;
 }
 
 bool irc::sockets::cidr_mask::operator==(const cidr_mask& other) const

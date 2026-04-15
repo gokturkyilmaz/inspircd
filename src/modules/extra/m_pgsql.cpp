@@ -3,14 +3,13 @@
  *
  *   Copyright (C) 2016 Adam <Adam@anope.org>
  *   Copyright (C) 2015 Daniel Vassdal <shutter@canternet.org>
- *   Copyright (C) 2013, 2016-2020 Sadie Powell <sadie@witchery.services>
+ *   Copyright (C) 2013, 2016-2020, 2023 Sadie Powell <sadie@witchery.services>
  *   Copyright (C) 2012-2015 Attila Molnar <attilamolnar@hush.com>
  *   Copyright (C) 2012 Robby <robby@chatbelgie.be>
  *   Copyright (C) 2009-2010 Daniel De Graaf <danieldg@inspircd.org>
- *   Copyright (C) 2009 Uli Schlachter <psychon@inspircd.org>
  *   Copyright (C) 2008 Thomas Stagner <aquanight@inspircd.org>
- *   Copyright (C) 2007, 2009-2010 Craig Edwards <brain@inspircd.org>
  *   Copyright (C) 2007, 2009 Dennis Friis <peavey@inspircd.org>
+ *   Copyright (C) 2007, 2009 Craig Edwards <brain@inspircd.org>
  *   Copyright (C) 2007 Robin Burchell <robin+git@viroteck.net>
  *   Copyright (C) 2006 Oliver Lupton <om@inspircd.org>
  *
@@ -32,15 +31,35 @@
 
 /// $PackageInfo: require_system("arch") postgresql-libs
 /// $PackageInfo: require_system("centos") postgresql-devel
-/// $PackageInfo: require_system("darwin") postgresql
+/// $PackageInfo: require_system("darwin") libpq
 /// $PackageInfo: require_system("debian") libpq-dev
+/// $PackageInfo: require_system("rocky") postgresql-devel
 /// $PackageInfo: require_system("ubuntu") libpq-dev
 
+
+#ifdef __GNUC__
+# pragma GCC diagnostic push
+#endif
+
+// Fix warnings about the use of commas at end of enumerator lists on C++03.
+#if defined __clang__
+# pragma clang diagnostic ignored "-Wc++11-extensions"
+#elif defined __GNUC__
+# if (__GNUC__ > 4) || ((__GNUC__ == 4) && (__GNUC_MINOR__ >= 8))
+#  pragma GCC diagnostic ignored "-Wpedantic"
+# else
+#  pragma GCC diagnostic ignored "-pedantic"
+# endif
+#endif
 
 #include "inspircd.h"
 #include <cstdlib>
 #include <libpq-fe.h>
 #include "modules/sql.h"
+
+#ifdef __GNUC__
+# pragma GCC diagnostic pop
+#endif
 
 /* SQLConn rewritten by peavey to
  * use EventHandler instead of
@@ -240,25 +259,52 @@ class SQLConn : public SQL::Provider, public EventHandler
 		DelayReconnect();
 	}
 
+	std::string EscapeDSN(const std::string& str)
+	{
+		std::string out;
+		out.reserve(str.size());
+
+		for (std::string::const_iterator it = str.begin(); it != str.end(); ++it)
+		{
+			char chr = *it;
+			switch (chr)
+			{
+				case '\\':
+					out.append("\\\\");
+					break;
+
+				case '\'':
+					out.append("\\'");
+					break;
+
+				default:
+					out.push_back(chr);
+					break;
+			}
+		}
+
+		return out;
+	}
+
 	std::string GetDSN()
 	{
 		std::ostringstream conninfo("connect_timeout = '5'");
 		std::string item;
 
 		if (conf->readString("host", item))
-			conninfo << " host = '" << item << "'";
+			conninfo << " host = '" << EscapeDSN(item) << "'";
 
 		if (conf->readString("port", item))
-			conninfo << " port = '" << item << "'";
+			conninfo << " port = '" << EscapeDSN(item) << "'";
 
 		if (conf->readString("name", item))
-			conninfo << " dbname = '" << item << "'";
+			conninfo << " dbname = '" << EscapeDSN(item) << "'";
 
 		if (conf->readString("user", item))
-			conninfo << " user = '" << item << "'";
+			conninfo << " user = '" << EscapeDSN(item) << "'";
 
 		if (conf->readString("pass", item))
-			conninfo << " password = '" << item << "'";
+			conninfo << " password = '" << EscapeDSN(item) << "'";
 
 		if (conf->getBool("ssl"))
 			conninfo << " sslmode = 'require'";
@@ -371,7 +417,10 @@ restart:
 					case PGRES_BAD_RESPONSE:
 					case PGRES_FATAL_ERROR:
 					{
-						SQL::Error err(SQL::QREPLY_FAIL, PQresultErrorMessage(result));
+						std::string errmsg = PQresultErrorMessage(result);
+						for (size_t pos = 0; ((pos = errmsg.find_first_of("\r\n", pos)) != std::string::npos); )
+							errmsg[pos] = ' ';
+						SQL::Error err(SQL::QREPLY_FAIL, errmsg);
 						qinprog.c->OnError(err);
 						break;
 					}

@@ -106,10 +106,10 @@
 #                    command "foo bar baz qux quz" then $3- will hold #
 #                    "baz qux quz" and $2 will contain "bar". You may #
 #                    also use the special variables: $nick, $ident,   #
-#                    $host and $vhost, and you may separate multiple  #
-#                    commands with a newline (which can be written in #
-#                    the file literally, or encoded as &nl; or \n     #
-#                    depending on the config format setting).         #
+#                    $address, $host and $vhost, and you may separate #
+#                    multiple commands with a newline (which can be   #
+#                    written in the file literally or encoded as &nl; #
+#                    or \n depending on the config format setting).   #
 #                                                                     #
 # requires    -      If you provide a value for 'requires' this means #
 #                    the given nickname MUST be online for the alias  #
@@ -632,6 +632,10 @@
 # that users must share a common channel with you to PRIVMSG or NOTICE
 # you.
 #<module name="commonchans">
+#
+# You can also require a common channel for inviting to another channel
+# by uncommenting this:
+# <commonchans invite="yes">
 
 #-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#
 # Auto join on connect module: Allows you to force users to join one
@@ -688,13 +692,13 @@
 #<module name="connectban">
 #
 # threshold - The number of connections which are allowed before a user
-#             is connectbnaned. Defaults to 10.
+#             is connectbanned. Defaults to 10.
 #
 # banmessage - The message to give users when Z-lining them for connecting
 #              too much.
 #
-# duration - The time period to ban users who connect to much for. Defaults
-#            to 10 minutes.
+# banduration - The time period to ban users who connect to much for. Defaults
+#               to 10 minutes.
 #
 # ipv4cidr - The IPv4 CIDR mask (1-32) to treat connecting users as coming
 #            from the same host. Defaults to 32.
@@ -710,7 +714,7 @@
 #
 #<connectban threshold="10"
 #            banmessage="Your IP range has been attempting to connect too many times in too short a duration. Wait a while, and you will be able to connect."
-#            duration="10m"
+#            banduration="6h"
 #            ipv4cidr="32"
 #            ipv6cidr="128"
 #            bootwait="2m"
@@ -1207,8 +1211,8 @@
 #<inviteexception bypasskey="yes">
 
 #-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#
-# IRCv3 module: Provides the following IRCv3 extensions:
-# extended-join, away-notify and account-notify. These are optional
+# IRCv3 module: Provides the IRCv3 account-notify, away-notify,
+# extended-join, and standard-replies extensions. These are optional
 # enhancements to the client-to-server protocol. An extension is only
 # active for a client when the client specifically requests it, so this
 # module needs the cap module to work.
@@ -1221,7 +1225,10 @@
 # The following block can be used to control which extensions are
 # enabled. Note that extended-join can be incompatible with delayjoin
 # and host cycling.
-#<ircv3 accountnotify="yes" awaynotify="yes" extendedjoin="yes">
+#<ircv3 accountnotify="yes"
+#       awaynotify="yes"
+#       extendedjoin="yes"
+#       standardreplies="yes">
 
 #-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#
 # IRCv3 account-tag module. Adds the 'account' tag which contains the
@@ -1268,7 +1275,7 @@
 #-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#
 # IRCv3 invite-notify module: Provides the invite-notify IRCv3
 # extension which notifies supporting clients when a user invites
-# another user into a channel. This respects <options:announceinvites>.
+# another user into a channel. This respects <security:announceinvites>.
 #<module name="ircv3_invitenotify">
 
 #-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#
@@ -1505,7 +1512,7 @@
 # mysql is more complex than described here, see the docs for more    #
 # info: https://docs.inspircd.org/3/modules/mysql                     #
 #
-#<database module="mysql" name="mydb" user="myuser" pass="mypass" host="localhost" id="my_database2">
+#<database module="mysql" name="mydb" user="myuser" pass="mypass" host="localhost" id="my_database2" ssl="no">
 
 #-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#
 # Named modes module: Allows for the display and set/unset of channel
@@ -1684,9 +1691,16 @@
 # requirekey    - If enabled, overriding on join requires a channel   #
 #                 key of "override" to be specified.                  #
 #                                                                     #
+# timeout:        The time period after which to automatically remove #
+#                 the override user mode. If not set then it will not #
+#                 be removed automatically.                           #
+#                                                                     #
 # enableumode   - If enabled, user mode +O is required for override.  #
 #                                                                     #
-#<override noisy="yes" requirekey="no" enableumode="yes">
+#<override noisy="yes"
+#          requirekey="no"
+#          timeout="30m"
+#          enableumode="yes">
 
 #-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#
 # Oper levels module: Gives each oper a level and prevents actions
@@ -1858,6 +1872,13 @@
 #<module name="regex_pcre">
 
 #-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#
+# Regular expression provider for PCRE2 (Perl-Compatible Regular
+# Expressions). You need libpcre2 installed to compile and load this
+# module. You must have at least 1 provider loaded to use the filter or
+# R-line modules.
+#<module name="regex_pcre2">
+
+#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#
 # Regular Expression Provider for RE2 Regular Expressions.
 # You need libre2 installed and in your include/library paths in order
 # to compile and load this module.
@@ -1910,7 +1931,7 @@
 # Repeat module: Allows to block, kick or ban upon similar messages
 # being uttered several times. Provides channel mode +E.
 #
-# Syntax: [~|*]<lines>:<sec>[:<difference>][:<backlog>]
+# Syntax: [~|*]<lines>:<duration>[:<difference>][:<backlog>]
 #         ~ is to block, * is to ban, default is kick.
 # lines      - In mode 1, the amount of lines that has to match consecutively.
 #              In mode 2, the size of the backlog to keep for matching.
@@ -2297,9 +2318,11 @@
 # If you want to prevent users from viewing TLS (SSL) certificate information
 # and fingerprints of other users, set operonly to yes. You can also set hash
 # to an IANA Hash Function Textual Name to use the SSL fingerprint sent by a
-# WebIRC gateway (requires the cgiirc module).
+# WebIRC gateway (requires the cgiirc module) and warnexpiring to warn users
+# when their client certificate is about to expire.
 #<sslinfo operonly="no"
-#         hash="sha-256">
+#         hash="sha-256"
+#         warnexpiring="1w">
 
 #-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#
 # mbedTLS TLS (SSL) module: Adds support for TLS (SSL) connections using mbedTLS.
@@ -2467,7 +2490,7 @@
 #<watch maxwatch="32">
 
 #-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#
-# WebSocket module: Adds HTML5 WebSocket support.
+# WebSocket module: Adds WebSocket support.
 # Specify hook="websocket" in a <bind> tag to make that port accept
 # WebSocket connections. Compatible with TLS (SSL).
 # Requires SHA-1 hash support available in the sha1 module.

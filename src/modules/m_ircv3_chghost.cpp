@@ -1,7 +1,8 @@
 /*
  * InspIRCd -- Internet Relay Chat Daemon
  *
- *   Copyright (C) 2017-2019 Sadie Powell <sadie@witchery.services>
+ *   Copyright (C) 2022 delthas
+ *   Copyright (C) 2017-2019, 2022 Sadie Powell <sadie@witchery.services>
  *   Copyright (C) 2015, 2018 Attila Molnar <attilamolnar@hush.com>
  *
  * This file is part of InspIRCd.  InspIRCd is free software: you can
@@ -21,11 +22,13 @@
 #include "inspircd.h"
 #include "modules/cap.h"
 #include "modules/ircv3.h"
+#include "modules/monitor.h"
 
 class ModuleIRCv3ChgHost : public Module
 {
 	Cap::Capability cap;
 	ClientProtocol::EventProvider protoevprov;
+	Monitor::API monitorapi;
 
 	void DoChgHost(User* user, const std::string& ident, const std::string& host)
 	{
@@ -36,13 +39,15 @@ class ModuleIRCv3ChgHost : public Module
 		msg.PushParamRef(ident);
 		msg.PushParamRef(host);
 		ClientProtocol::Event protoev(protoevprov, msg);
-		IRCv3::WriteNeighborsWithCap(user, protoev, cap, true);
+		IRCv3::WriteNeighborsWithCap res(user, protoev, cap, true);
+		Monitor::WriteWatchersWithCap(monitorapi, user, protoev, cap, res.GetAlreadySentId());
 	}
 
  public:
 	ModuleIRCv3ChgHost()
 		: cap(this, "chghost")
 		, protoevprov(this, "CHGHOST")
+		, monitorapi(this)
 	{
 	}
 

@@ -2,7 +2,7 @@
  * InspIRCd -- Internet Relay Chat Daemon
  *
  *   Copyright (C) 2019 linuxdaemon <linuxdaemon.irc@gmail.com>
- *   Copyright (C) 2018-2021 Sadie Powell <sadie@witchery.services>
+ *   Copyright (C) 2018-2022 Sadie Powell <sadie@witchery.services>
  *
  * This file is part of InspIRCd.  InspIRCd is free software: you can
  * redistribute it and/or modify it under the terms of the GNU General Public
@@ -170,6 +170,12 @@ class CommandTagMsg : public Command
 			{
 				// If the source is a local user then we only look up the target by nick.
 				target = ServerInstance->FindNickOnly(parameters[0]);
+
+				// Drop attempts to send a tag message to a server. This usually happens when the
+				// server is started in debug mode and a client tries to send a typing notification
+				// to a query window created by the debug message.
+				if (!target && irc::equals(parameters[0], ServerInstance->FakeClient->GetFullHost()))
+					return CMD_FAILURE;
 			}
 		}
 		else

@@ -6,8 +6,8 @@
  *   Copyright (C) 2013-2014, 2016 Attila Molnar <attilamolnar@hush.com>
  *   Copyright (C) 2012, 2019 Robby <robby@chatbelgie.be>
  *   Copyright (C) 2009-2010 Daniel De Graaf <danieldg@inspircd.org>
- *   Copyright (C) 2007, 2010 Craig Edwards <brain@inspircd.org>
  *   Copyright (C) 2007 Dennis Friis <peavey@inspircd.org>
+ *   Copyright (C) 2007 Craig Edwards <brain@inspircd.org>
  *
  * This file is part of InspIRCd.  InspIRCd is free software: you can
  * redistribute it and/or modify it under the terms of the GNU General Public
@@ -57,24 +57,24 @@ static const char* const lines[] = {
 	"    Robin Burchell,         w00t,       <w00t@inspircd.org>",
 	" ",
 	"\002Active Contributors\002:",
-	"   Adam            progval         Robby",
+	"    Adam            progval         Robby",
 	" ",
 	"\002Former Contributors\002:",
-	"   Adremelech      Ankit           AnMaster        Bricker",
-	"   BuildSmart      Burlex          CC              ChrisTX",
-	"   Dan             djGrrr          dmb             eggy",
-	"   fraggeln        GreenReaper     HiroP           jackmcbarn",
-	"   jamie           Jason           jilles          John2",
-	"   kaniini         LeaChim         linuxdaemon     MacGyver",
-	"   majic           Namegduf        owine           Phoenix",
-	"   pippijn         praetorian      Quension        satmd",
-	"   Shawn           Sheogorath      Shutter         skenmy",
-	"   Skip            Stskeeps        Taros           ThaPrince",
-	"   Thunderhacker   typobox43       Zaba",
+	"    Adremelech      Ankit           AnMaster        Bricker",
+	"    BuildSmart      Burlex          CC              ChrisTX",
+	"    Dan             djGrrr          dmb             eggy",
+	"    fraggeln        GreenReaper     HiroP           jackmcbarn",
+	"    jamie           Jason           jilles          John2",
+	"    kaniini         LeaChim         linuxdaemon     MacGyver",
+	"    majic           Namegduf        owine           Phoenix",
+	"    pippijn         praetorian      Quension        satmd",
+	"    Shawn           Sheogorath      Shutter         skenmy",
+	"    Skip            Stskeeps        Taros           ThaPrince",
+	"    Thunderhacker   typobox43       Zaba",
 	" ",
 	"\002Thanks To\002:",
-	"   Asmo            Brik            dan-            Duck",
-	"   jwheare         prawnsalad",
+	"    Asmo            Brik            dan-            Duck",
+	"    jwheare         prawnsalad",
 	" ",
 	" Best experienced with \002an IRC client\002",
 	NULL

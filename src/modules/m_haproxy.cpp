@@ -3,7 +3,7 @@
  *
  *   Copyright (C) 2019-2020 Matt Schatz <genius3000@g3k.solutions>
  *   Copyright (C) 2019 linuxdaemon <linuxdaemon.irc@gmail.com>
- *   Copyright (C) 2018-2019, 2021 Sadie Powell <sadie@witchery.services>
+ *   Copyright (C) 2018-2019, 2021, 2023 Sadie Powell <sadie@witchery.services>
  *
  * This file is part of InspIRCd.  InspIRCd is free software: you can
  * redistribute it and/or modify it under the terms of the GNU General Public
@@ -438,7 +438,7 @@ class ModuleHAProxy : public Module
 
 	Version GetVersion() CXX11_OVERRIDE
 	{
-		return Version("Allows IRC connections to be made using reverse proxies that implement the HAProxy PROXY protocol.", VF_VENDOR);
+		return Version("Allows IRC connections to be made using reverse proxies that implement version 2 of the HAProxy PROXY protocol.", VF_VENDOR);
 	}
 };
 

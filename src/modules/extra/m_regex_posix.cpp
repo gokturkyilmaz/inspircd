@@ -1,11 +1,10 @@
 /*
  * InspIRCd -- Internet Relay Chat Daemon
  *
- *   Copyright (C) 2013, 2021 Sadie Powell <sadie@witchery.services>
+ *   Copyright (C) 2013, 2021-2022 Sadie Powell <sadie@witchery.services>
  *   Copyright (C) 2012-2013 Attila Molnar <attilamolnar@hush.com>
  *   Copyright (C) 2012 Robby <robby@chatbelgie.be>
  *   Copyright (C) 2009-2010 Daniel De Graaf <danieldg@inspircd.org>
- *   Copyright (C) 2009 Uli Schlachter <psychon@inspircd.org>
  *   Copyright (C) 2008 Thomas Stagner <aquanight@inspircd.org>
  *
  * This file is part of InspIRCd.  InspIRCd is free software: you can
@@ -24,8 +23,14 @@
 
 #include "inspircd.h"
 #include "modules/regex.h"
-#include <sys/types.h>
-#include <regex.h>
+
+#ifdef _WIN32
+# include "pcre2posix.h"
+# pragma comment(lib, "pcre2-posix.lib")
+#else
+# include <sys/types.h>
+# include <regex.h>
+#endif
 
 class POSIXRegex : public Regex
 {

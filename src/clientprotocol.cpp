@@ -1,7 +1,7 @@
 /*
  * InspIRCd -- Internet Relay Chat Daemon
  *
- *   Copyright (C) 2018-2020 Sadie Powell <sadie@witchery.services>
+ *   Copyright (C) 2018-2020, 2022 Sadie Powell <sadie@witchery.services>
  *   Copyright (C) 2018 Attila Molnar <attilamolnar@hush.com>
  *
  * This file is part of InspIRCd.  InspIRCd is free software: you can
@@ -20,8 +20,8 @@
 
 #include "inspircd.h"
 
-ClientProtocol::Serializer::Serializer(Module* mod, const char* Name)
-	: DataProvider(mod, std::string("serializer/") + Name)
+ClientProtocol::Serializer::Serializer(Module* mod, const std::string& Name)
+	: DataProvider(mod, "serializer/" + Name)
 	, evprov(mod)
 {
 }
@@ -67,6 +67,38 @@ const ClientProtocol::SerializedMessage& ClientProtocol::Serializer::SerializeFo
 		FOREACH_MOD_CUSTOM(evprov, MessageTagProvider, OnPopulateTags, (msg));
 	}
 	return msg.GetSerialized(Message::SerializedInfo(this, MakeTagWhitelist(user, msg.GetTags())));
+}
+
+std::string ClientProtocol::Message::EscapeTag(const std::string& value)
+{
+	std::string ret;
+	ret.reserve(value.size());
+	for (std::string::const_iterator it = value.begin(); it != value.end(); ++it)
+	{
+		const char chr = *it;
+		switch (chr)
+		{
+			case ' ':
+				ret.append("\\s");
+				break;
+			case ';':
+				ret.append("\\;");
+				break;
+			case '\\':
+				ret.append("\\\\");
+				break;
+			case '\n':
+				ret.append("\\n");
+				break;
+			case '\r':
+				ret.append("\\r");
+				break;
+			default:
+				ret.push_back(chr);
+				break;
+		}
+	}
+	return ret;
 }
 
 const ClientProtocol::SerializedMessage& ClientProtocol::Message::GetSerialized(const SerializedInfo& serializeinfo) const

@@ -2,9 +2,9 @@
  * InspIRCd -- Internet Relay Chat Daemon
  *
  *   Copyright (C) 2021 Herman <GermanAizek@yandex.ru>
- *   Copyright (C) 2019-2020 Matt Schatz <genius3000@g3k.solutions>
+ *   Copyright (C) 2019 Matt Schatz <genius3000@g3k.solutions>
  *   Copyright (C) 2018 linuxdaemon <linuxdaemon.irc@gmail.com>
- *   Copyright (C) 2013, 2017-2018, 2020 Sadie Powell <sadie@witchery.services>
+ *   Copyright (C) 2013, 2017-2018, 2020, 2022-2023 Sadie Powell <sadie@witchery.services>
  *   Copyright (C) 2012, 2019 Robby <robby@chatbelgie.be>
  *   Copyright (C) 2012, 2014, 2016 Attila Molnar <attilamolnar@hush.com>
  *   Copyright (C) 2009 Daniel De Graaf <danieldg@inspircd.org>
@@ -48,25 +48,26 @@ public:
 	{
 	}
 
+	void Apply(User* u) CXX11_OVERRIDE
+	{
+		u->WriteNumeric(RPL_SAVENICK, u->nick, InspIRCd::Format("Services reserved nickname: %s", reason.c_str()));
+		u->ChangeNick(u->uuid);
+	}
+
 	bool Matches(User* u) CXX11_OVERRIDE
 	{
-		if (u->nick == nickname)
-			return true;
-		return false;
+		return irc::equals(u->nick, nickname);
 	}
 
 	bool Matches(const std::string& s) CXX11_OVERRIDE
 	{
-		return InspIRCd::Match(s, nickname);
+		return irc::equals(s, nickname);
 	}
 
 	void DisplayExpiry() CXX11_OVERRIDE
 	{
 		if (!silent)
-		{
-			ServerInstance->SNO->WriteToSnoMask('x', "Removing expired SVSHOLD %s (set by %s %s ago): %s",
-				nickname.c_str(), source.c_str(), InspIRCd::DurationString(ServerInstance->Time() - set_time).c_str(), reason.c_str());
-		}
+			XLine::DisplayExpiry();
 	}
 
 	const std::string& Displayable() CXX11_OVERRIDE
@@ -87,11 +88,6 @@ class SVSHoldFactory : public XLineFactory
 	XLine* Generate(time_t set_time, unsigned long duration, const std::string& source, const std::string& reason, const std::string& xline_specific_mask) CXX11_OVERRIDE
 	{
 		return new SVSHold(set_time, duration, source, reason, xline_specific_mask);
-	}
-
-	bool AutoApplyToUserList(XLine* x) CXX11_OVERRIDE
-	{
-		return false;
 	}
 };
 
@@ -141,7 +137,7 @@ class CommandSvshold : public Command
 				user->WriteNotice("*** Invalid duration for SVSHOLD.");
 				return CMD_FAILURE;
 			}
-			SVSHold* r = new SVSHold(ServerInstance->Time(), duration, user->nick.c_str(), parameters[2].c_str(), parameters[0].c_str());
+			SVSHold* r = new SVSHold(ServerInstance->Time(), duration, user->nick, parameters[2], parameters[0]);
 
 			if (ServerInstance->XLines->AddLine(r, user))
 			{
@@ -150,11 +146,11 @@ class CommandSvshold : public Command
 
 				if (!duration)
 				{
-					ServerInstance->SNO->WriteToSnoMask('x', "%s added permanent SVSHOLD for %s: %s", user->nick.c_str(), parameters[0].c_str(), parameters[2].c_str());
+					ServerInstance->SNO->WriteToSnoMask('x', "%s added a permanent SVSHOLD on %s: %s", user->nick.c_str(), parameters[0].c_str(), parameters[2].c_str());
 				}
 				else
 				{
-					ServerInstance->SNO->WriteToSnoMask('x', "%s added timed SVSHOLD for %s, expires in %s (on %s): %s",
+					ServerInstance->SNO->WriteToSnoMask('x', "%s added a timed SVSHOLD on %s, expires in %s (on %s): %s",
 						user->nick.c_str(), parameters[0].c_str(), InspIRCd::DurationString(duration).c_str(),
 						InspIRCd::TimeString(ServerInstance->Time() + duration).c_str(), parameters[2].c_str());
 				}

@@ -3,13 +3,13 @@
  *
  *   Copyright (C) 2018-2020 Matt Schatz <genius3000@g3k.solutions>
  *   Copyright (C) 2018-2019 linuxdaemon <linuxdaemon.irc@gmail.com>
- *   Copyright (C) 2013, 2017-2021 Sadie Powell <sadie@witchery.services>
+ *   Copyright (C) 2013, 2017-2023 Sadie Powell <sadie@witchery.services>
  *   Copyright (C) 2013, 2015-2016 Adam <Adam@anope.org>
  *   Copyright (C) 2012-2016 Attila Molnar <attilamolnar@hush.com>
  *   Copyright (C) 2012, 2018 Robby <robby@chatbelgie.be>
  *   Copyright (C) 2009-2010 Daniel De Graaf <danieldg@inspircd.org>
- *   Copyright (C) 2007, 2010 Craig Edwards <brain@inspircd.org>
  *   Copyright (C) 2007 Dennis Friis <peavey@inspircd.org>
+ *   Copyright (C) 2007 Craig Edwards <brain@inspircd.org>
  *   Copyright (C) 2006-2009 Robin Burchell <robin+git@viroteck.net>
  *
  * This file is part of InspIRCd.  InspIRCd is free software: you can
@@ -57,6 +57,23 @@ class DNSBLConfEntry : public refcountbase
 		}
 };
 
+class DNSBLIdentHost
+{
+public:
+	std::string ident;
+	std::string host;
+	std::string reason;
+
+	DNSBLIdentHost(reference<DNSBLConfEntry> cfg, const std::string& msg)
+		: ident(cfg->ident)
+		, host(cfg->host)
+		, reason(msg)
+	{
+	}
+};
+
+typedef SimpleExtItem<DNSBLIdentHost> IdentHostExtItem;
+typedef SimpleExtItem<std::vector<std::string> > MarkExtItem;
 
 /** Resolver for CGI:IRC hostnames encoded in ident/real name
  */
@@ -65,16 +82,18 @@ class DNSBLResolver : public DNS::Request
  private:
 	irc::sockets::sockaddrs theirsa;
 	std::string theiruid;
-	LocalStringExt& nameExt;
+	MarkExtItem& nameExt;
+	IdentHostExtItem& maskExt;
 	LocalIntExt& countExt;
 	reference<DNSBLConfEntry> ConfEntry;
 
  public:
-	DNSBLResolver(DNS::Manager *mgr, Module *me, LocalStringExt& match, LocalIntExt& ctr, const std::string &hostname, LocalUser* u, reference<DNSBLConfEntry> conf)
+	DNSBLResolver(DNS::Manager *mgr, Module *me, MarkExtItem& match, LocalIntExt& ctr, IdentHostExtItem& mask, const std::string &hostname, LocalUser* u, reference<DNSBLConfEntry> conf)
 		: DNS::Request(mgr, me, hostname, DNS::QUERY_A, true, conf->timeout)
 		, theirsa(u->client_sa)
 		, theiruid(u->uuid)
 		, nameExt(match)
+		, maskExt(mask)
 		, countExt(ctr)
 		, ConfEntry(conf)
 	{
@@ -164,30 +183,34 @@ class DNSBLResolver : public DNS::Request
 				}
 				case DNSBLConfEntry::I_MARK:
 				{
-					if (!ConfEntry->ident.empty())
+					if (!ConfEntry->ident.empty() || !ConfEntry->host.empty())
 					{
-						them->WriteNotice("Your ident has been set to " + ConfEntry->ident + " because you matched " + reason);
-						them->ChangeIdent(ConfEntry->ident);
+						// Store the u@h mask for later to avoid being overwritten by ident/hostname lookups.
+						maskExt.set(them, new DNSBLIdentHost(ConfEntry, reason));
+
+						// If the user is already connected we should just do this now.
+						if (them->registered == REG_ALL)
+							creator->OnUserConnect(them);
 					}
 
-					if (!ConfEntry->host.empty())
+					std::vector<std::string>* marks = nameExt.get(them);
+					if (!marks)
 					{
-						them->WriteNotice("Your host has been set to " + ConfEntry->host + " because you matched " + reason);
-						them->ChangeDisplayedHost(ConfEntry->host);
+						marks = new std::vector<std::string>();
+						nameExt.set(them, marks);
 					}
-
-					nameExt.set(them, ConfEntry->name);
+					marks->push_back(ConfEntry->name);
 					break;
 				}
 				case DNSBLConfEntry::I_KLINE:
 				{
-					KLine* kl = new KLine(ServerInstance->Time(), ConfEntry->duration, ServerInstance->Config->ServerName.c_str(), reason.c_str(),
+					KLine* kl = new KLine(ServerInstance->Time(), ConfEntry->duration, MODNAME "@" + ServerInstance->Config->ServerName, reason,
 							them->GetBanIdent(), them->GetIPString());
 					if (ServerInstance->XLines->AddLine(kl,NULL))
 					{
-						ServerInstance->SNO->WriteToSnoMask('x', "K-line added due to DNSBL match on %s to expire in %s (on %s): %s",
-							kl->Displayable().c_str(), InspIRCd::DurationString(kl->duration).c_str(),
-							InspIRCd::TimeString(kl->expiry).c_str(), reason.c_str());
+						ServerInstance->SNO->WriteToSnoMask('x', "%s added a timed K-line on %s, expires in %s (on %s): %s",
+							kl->source.c_str(), kl->Displayable().c_str(), InspIRCd::DurationString(kl->duration).c_str(),
+							InspIRCd::TimeString(kl->expiry).c_str(), kl->reason.c_str());
 						ServerInstance->XLines->ApplyLines();
 					}
 					else
@@ -199,13 +222,13 @@ class DNSBLResolver : public DNS::Request
 				}
 				case DNSBLConfEntry::I_GLINE:
 				{
-					GLine* gl = new GLine(ServerInstance->Time(), ConfEntry->duration, ServerInstance->Config->ServerName.c_str(), reason.c_str(),
+					GLine* gl = new GLine(ServerInstance->Time(), ConfEntry->duration, MODNAME "@" + ServerInstance->Config->ServerName, reason,
 							them->GetBanIdent(), them->GetIPString());
 					if (ServerInstance->XLines->AddLine(gl,NULL))
 					{
-						ServerInstance->SNO->WriteToSnoMask('x', "G-line added due to DNSBL match on %s to expire in %s (on %s): %s",
-							gl->Displayable().c_str(), InspIRCd::DurationString(gl->duration).c_str(),
-							InspIRCd::TimeString(gl->expiry).c_str(), reason.c_str());
+						ServerInstance->SNO->WriteToSnoMask('x', "%s added a timed G-line on %s, expires in %s (on %s): %s",
+							gl->source.c_str(), gl->Displayable().c_str(), InspIRCd::DurationString(gl->duration).c_str(),
+							InspIRCd::TimeString(gl->expiry).c_str(), gl->reason.c_str());
 						ServerInstance->XLines->ApplyLines();
 					}
 					else
@@ -217,13 +240,13 @@ class DNSBLResolver : public DNS::Request
 				}
 				case DNSBLConfEntry::I_ZLINE:
 				{
-					ZLine* zl = new ZLine(ServerInstance->Time(), ConfEntry->duration, ServerInstance->Config->ServerName.c_str(), reason.c_str(),
+					ZLine* zl = new ZLine(ServerInstance->Time(), ConfEntry->duration, MODNAME "@" + ServerInstance->Config->ServerName, reason,
 							them->GetIPString());
 					if (ServerInstance->XLines->AddLine(zl,NULL))
 					{
-						ServerInstance->SNO->WriteToSnoMask('x', "Z-line added due to DNSBL match on %s to expire in %s (on %s): %s",
-							them->GetIPString().c_str(), InspIRCd::DurationString(zl->duration).c_str(),
-							InspIRCd::TimeString(zl->expiry).c_str(), reason.c_str());
+						ServerInstance->SNO->WriteToSnoMask('x', "%s added a timed Z-line on %s, expires in %s (on %s): %s",
+							zl->source.c_str(), zl->Displayable().c_str(), InspIRCd::DurationString(zl->duration).c_str(),
+							InspIRCd::TimeString(zl->expiry).c_str(), zl->reason.c_str());
 						ServerInstance->XLines->ApplyLines();
 					}
 					else
@@ -283,8 +306,9 @@ class ModuleDNSBL : public Module, public Stats::EventListener
 {
 	DNSBLConfList DNSBLConfEntries;
 	dynamic_reference<DNS::Manager> DNS;
-	LocalStringExt nameExt;
+	MarkExtItem nameExt;
 	LocalIntExt countExt;
+	IdentHostExtItem maskExt;
 
 	/*
 	 *	Convert a string to EnumBanaction
@@ -309,6 +333,7 @@ class ModuleDNSBL : public Module, public Stats::EventListener
 		, DNS(this, "DNS")
 		, nameExt("dnsbl_match", ExtensionItem::EXT_USER, this)
 		, countExt("dnsbl_pending", ExtensionItem::EXT_USER, this)
+		, maskExt("dnsbl_mask", ExtensionItem::EXT_USER, this)
 	{
 	}
 
@@ -321,6 +346,9 @@ class ModuleDNSBL : public Module, public Stats::EventListener
 	{
 		Module* corexline = ServerInstance->Modules->Find("core_xline");
 		ServerInstance->Modules->SetPriority(this, I_OnSetUserIP, PRIORITY_AFTER, corexline);
+
+		Module* hostchange = ServerInstance->Modules->Find("hostchange");
+		ServerInstance->Modules->SetPriority(this, I_OnUserConnect, PRIORITY_BEFORE, hostchange);
 	}
 
 	Version GetVersion() CXX11_OVERRIDE
@@ -451,7 +479,7 @@ class ModuleDNSBL : public Module, public Stats::EventListener
 			std::string hostname = reversedip + "." + DNSBLConfEntries[i]->domain;
 
 			/* now we'd need to fire off lookups for `hostname'. */
-			DNSBLResolver *r = new DNSBLResolver(*this->DNS, this, nameExt, countExt, hostname, user, DNSBLConfEntries[i]);
+			DNSBLResolver *r = new DNSBLResolver(*this->DNS, this, nameExt, countExt, maskExt, hostname, user, DNSBLConfEntries[i]);
 			try
 			{
 				this->DNS->Process(r);
@@ -473,7 +501,7 @@ class ModuleDNSBL : public Module, public Stats::EventListener
 		if (!myclass->config->readString("dnsbl", dnsbl))
 			return MOD_RES_PASSTHRU;
 
-		std::string* match = nameExt.get(user);
+		std::vector<std::string>* match = nameExt.get(user);
 		if (!match)
 		{
 			ServerInstance->Logs->Log("CONNECTCLASS", LOG_DEBUG, "The %s connect class is not suitable as it requires a DNSBL mark",
@@ -481,14 +509,16 @@ class ModuleDNSBL : public Module, public Stats::EventListener
 			return MOD_RES_DENY;
 		}
 
-		if (!InspIRCd::Match(*match, dnsbl))
+		for (std::vector<std::string>::const_iterator it = match->begin(); it != match->end(); ++it)
 		{
-			ServerInstance->Logs->Log("CONNECTCLASS", LOG_DEBUG, "The %s connect class is not suitable as the DNSBL mark (%s) does not match %s",
-					myclass->GetName().c_str(), match->c_str(), dnsbl.c_str());
-			return MOD_RES_DENY;
+			if (InspIRCd::Match(*it, dnsbl))
+				return MOD_RES_PASSTHRU;
 		}
 
-		return MOD_RES_PASSTHRU;
+		const std::string marks = stdalgo::string::join(dnsbl);
+		ServerInstance->Logs->Log("CONNECTCLASS", LOG_DEBUG, "The %s connect class is not suitable as the DNSBL marks (%s) do not match %s",
+				myclass->GetName().c_str(), marks.c_str(), dnsbl.c_str());
+		return MOD_RES_DENY;
 	}
 
 	ModResult OnCheckReady(LocalUser *user) CXX11_OVERRIDE
@@ -496,6 +526,27 @@ class ModuleDNSBL : public Module, public Stats::EventListener
 		if (countExt.get(user))
 			return MOD_RES_DENY;
 		return MOD_RES_PASSTHRU;
+	}
+
+	void OnUserConnect(LocalUser* user) CXX11_OVERRIDE
+	{
+		DNSBLIdentHost* ih = maskExt.get(user);
+		if (ih)
+		{
+			if (!ih->ident.empty())
+			{
+				user->WriteNotice("Your ident has been set to " + ih->ident + " because you matched " + ih->reason);
+				user->ChangeIdent(ih->ident);
+			}
+
+			if (!ih->host.empty())
+			{
+				user->WriteNotice("Your host has been set to " + ih->host + " because you matched " + ih->reason);
+				user->ChangeDisplayedHost(ih->host);
+			}
+
+			maskExt.unset(user);
+		}
 	}
 
 	ModResult OnStats(Stats::Context& stats) CXX11_OVERRIDE

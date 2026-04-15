@@ -1,7 +1,7 @@
 #
 # InspIRCd -- Internet Relay Chat Daemon
 #
-#   Copyright (C) 2016-2021 Sadie Powell <sadie@witchery.services>
+#   Copyright (C) 2016-2022 Sadie Powell <sadie@witchery.services>
 #
 # This file is part of InspIRCd.  InspIRCd is free software: you can
 # redistribute it and/or modify it under the terms of the GNU General Public
@@ -153,8 +153,8 @@ sub __error {
 	push @message, '';
 
 	push @message, 'If you would like help with fixing this problem then visit our IRC';
-	push @message, 'channel at irc.inspircd.org #InspIRCd or create a support discussion';
-	push @message, 'at https://github.com/inspircd/inspircd/discussions.';
+	push @message, 'channel at ircs://irc.teranova.net/inspircd or create a support';
+	push @message, 'discussion at https://github.com/inspircd/inspircd/discussions.';
 	push @message, '';
 
 	print_error @message;

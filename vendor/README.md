@@ -18,9 +18,9 @@ This directory contains vendored dependencies that are shipped with InspIRCd to 
 
 **License** &mdash; MIT License
 
-**Version** &mdash; v2.9.4
+**Version** &mdash; debian/2.9.4-6
 
-**Website** &mdash; [https://github.com/nodejs/http-parser](https://github.com/nodejs/http-parser)
+**Website** &mdash; [https://git.in-ulm.de/cbiedl/http-parser](https://git.in-ulm.de/cbiedl/http-parser)
 
 ## sha2
 
@@ -38,7 +38,7 @@ This directory contains vendored dependencies that are shipped with InspIRCd to 
 
 **License** &mdash; Boost Software License
 
-**Version** &mdash; v3.2.1
+**Version** &mdash; v4.0.6
 
 **Website** &mdash; [https://github.com/nemtrif/utfcpp](https://github.com/nemtrif/utfcpp)
 

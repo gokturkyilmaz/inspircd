@@ -3,17 +3,17 @@
  *
  *   Copyright (C) 2020 Matt Schatz <genius3000@g3k.solutions>
  *   Copyright (C) 2019 linuxdaemon <linuxdaemon.irc@gmail.com>
- *   Copyright (C) 2017 Wade Cline <wadecline@hotmail.com>
- *   Copyright (C) 2014, 2016 Adam <Adam@anope.org>
+ *   Copyright (C) 2017, 2023 Wade Cline <wadecline@hotmail.com>
+ *   Copyright (C) 2016 Adam <Adam@anope.org>
  *   Copyright (C) 2014 Julien Vehent <julien@linuxwall.info>
- *   Copyright (C) 2013-2014, 2016-2021 Sadie Powell <sadie@witchery.services>
+ *   Copyright (C) 2013-2014, 2016-2023 Sadie Powell <sadie@witchery.services>
  *   Copyright (C) 2012-2017 Attila Molnar <attilamolnar@hush.com>
  *   Copyright (C) 2012 Robby <robby@chatbelgie.be>
  *   Copyright (C) 2012 ChrisTX <xpipe@hotmail.de>
  *   Copyright (C) 2009-2010 Daniel De Graaf <danieldg@inspircd.org>
  *   Copyright (C) 2008 Robin Burchell <robin+git@viroteck.net>
  *   Copyright (C) 2007 Dennis Friis <peavey@inspircd.org>
- *   Copyright (C) 2006-2008, 2010 Craig Edwards <brain@inspircd.org>
+ *   Copyright (C) 2006-2008 Craig Edwards <brain@inspircd.org>
  *   Copyright (C) 2006 Oliver Lupton <om@inspircd.org>
  *
  * This file is part of InspIRCd.  InspIRCd is free software: you can
@@ -36,6 +36,7 @@
 /// $PackageInfo: require_system("centos") openssl-devel pkgconfig
 /// $PackageInfo: require_system("darwin") openssl pkg-config
 /// $PackageInfo: require_system("debian") libssl-dev openssl pkg-config
+/// $PackageInfo: require_system("rocky") openssl-devel pkgconfig
 /// $PackageInfo: require_system("ubuntu") libssl-dev openssl pkg-config
 
 
@@ -77,8 +78,9 @@
 #endif
 
 #ifdef _WIN32
-# pragma comment(lib, "ssleay32.lib")
-# pragma comment(lib, "libeay32.lib")
+# define timegm _mkgmtime
+# pragma comment(lib, "libcrypto.lib")
+# pragma comment(lib, "libssl.lib")
 #endif
 
 // Compatibility layer to allow OpenSSL 1.0 to use the 1.1 API.
@@ -408,6 +410,12 @@ namespace OpenSSL
 				setoptions |= SSL_OP_NO_TLSv1_2;
 #endif
 
+#ifdef SSL_OP_NO_TLSv1_3
+			// Enable TLSv1.3 by default.
+			if (!tag->getBool("tlsv13", true))
+				setoptions |= SSL_OP_NO_TLSv1_3;
+#endif
+
 			if (!setoptions && !clearoptions)
 				return; // Nothing to do
 
@@ -693,10 +701,20 @@ class OpenSSLIOHook : public SSLIOHook
 			certinfo->fingerprint = BinToHex(md, n);
 		}
 
-		if ((ASN1_UTCTIME_cmp_time_t(X509_getm_notAfter(cert), ServerInstance->Time()) == -1) || (ASN1_UTCTIME_cmp_time_t(X509_getm_notBefore(cert), ServerInstance->Time()) == 0))
-		{
-			certinfo->error = "Not activated, or expired certificate";
-		}
+		certinfo->activation = GetTime(X509_getm_notBefore(cert));
+		certinfo->expiration = GetTime(X509_getm_notAfter(cert));
+
+#if OPENSSL_VERSION_NUMBER < 0x10101000L
+# define ASN1_TIME_cmp_time_t ASN1_UTCTIME_cmp_time_t
+#endif
+
+		int activated = ASN1_TIME_cmp_time_t(X509_getm_notBefore(cert), ServerInstance->Time());
+		if (activated != -1 && activated != 0)
+			certinfo->error = "Certificate not activated";
+
+		int expired = ASN1_TIME_cmp_time_t(X509_getm_notAfter(cert), ServerInstance->Time());
+		if (expired != 0 && expired != 1)
+			certinfo->error = "Certificate has expired";
 
 		X509_free(cert);
 	}
@@ -709,6 +727,23 @@ class OpenSSLIOHook : public SSLIOHook
 		out.assign(buf);
 		for (size_t pos = 0; ((pos = out.find_first_of("\r\n", pos)) != std::string::npos); )
 			out[pos] = ' ';
+	}
+
+	static time_t GetTime(ASN1_TIME* x509time)
+	{
+#if OPENSSL_VERSION_NUMBER >= 0x10101000L
+		if (!x509time)
+			return 0;
+
+		struct tm ts;
+		if (!ASN1_TIME_to_tm(x509time, &ts))
+			return 0;
+
+		return timegm(&ts);
+#else
+		// OpenSSL 1.1 is required for ASN_TIME_to_tm.
+		return 0;
+#endif
 	}
 
 	void SSLInfoCallback(int where, int rc)

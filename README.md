@@ -2,6 +2,8 @@
 
 InspIRCd is a modular C++ Internet Relay Chat (IRC) server for UNIX-like and Windows systems.
 
+**IMPORTANT** InspIRCd v3 is no longer maintained. Please upgrade as soon as possible.
+
 ## Supported Platforms
 
 InspIRCd is supported on the following platforms:
@@ -12,9 +14,9 @@ InspIRCd is supported on the following platforms:
 
 - The most recent three major releases of macOS using the AppleClang, Clang, or GCC (*not* LLVM-GCC) compilers and the GNU toolchains.
 
-- Windows 7 or newer using the MSVC 14 (Visual Studio 2015) compiler and CMake 2.8 or newer.
+- Windows 7 or newer using the MSVC 14 (Visual Studio 2015) compiler and CMake 3.8 or newer.
 
-Alternate platforms and toolchains may also work but are not officially supported by the InspIRCd team. Generally speaking if you are using a reasonably modern UNIX-like system you should be able to build InspIRCd on it.
+Other platforms and toolchains may also work but are not officially supported by the InspIRCd team. Generally speaking if you are using a reasonably modern UNIX-like system you should be able to build InspIRCd on it. If you can not and you wish to submit a patch we are happy to accept it as long as it is not extremely large.
 
 If you encounter any bugs then [please file an issue](https://github.com/inspircd/inspircd/issues/new/choose).
 
@@ -22,9 +24,9 @@ If you encounter any bugs then [please file an issue](https://github.com/inspirc
 
 Most InspIRCd users running a UNIX-like system build from source. A guide about how to do this is available on [the InspIRCd docs site](https://docs.inspircd.org/3/installation/source).
 
-Building from source on Windows is generally not recommended but [a guide is available](https://github.com/inspircd/inspircd/blob/master/win/README.txt) if you wish to do this.
+Building from source on Windows is generally not recommended but [a guide is available](https://docs.inspircd.org/3/installation/windows-source/) if you wish to do this.
 
-If you are running on CentOS 7/8, Debian 10/11/12, Ubuntu 18.04/20.04, or Windows 7+ binary packages are available from [the downloads page](https://github.com/inspircd/inspircd/releases/latest).
+If you are running on Debian 11/12/13, RHEL 8/9, Ubuntu 20.04/22.04, or Windows 8+ binary packages are available from [the downloads page](https://github.com/inspircd/inspircd/releases/latest).
 
 A [Docker](https://www.docker.com) image is also available. See [the inspircd-docker repository](https://github.com/inspircd/inspircd-docker) for more information.
 
@@ -39,8 +41,7 @@ InspIRCd is licensed under [version 2 of the GNU General Public License](https:/
 * [Website](https://www.inspircd.org)
 * [Documentation](https://docs.inspircd.org)
 * [GitHub](https://github.com/inspircd)
-* [Twitter](https://twitter.com/inspircdteam)
-* [Mastodon](https://fosstodon.org/@inspircd)
-* Support IRC channel &mdash; \#inspircd on irc.inspircd.org
-* Development IRC channel &mdash; \#inspircd.dev on irc.inspircd.org
-* InspIRCd test network &mdash; testnet.inspircd.org
+* [Social Media](https://docs.inspircd.org/social)
+* Support IRC channel &mdash; \#inspircd on irc.teranova.net (TLS only)
+* Development IRC channel &mdash; \#inspircd.dev on irc.teranova.net (TLS only)
+* InspIRCd test network &mdash; testnet.inspircd.org (TLS only)

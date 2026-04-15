@@ -1,12 +1,11 @@
 /*
  * InspIRCd -- Internet Relay Chat Daemon
  *
- *   Copyright (C) 2013, 2015, 2019-2020 Sadie Powell <sadie@witchery.services>
+ *   Copyright (C) 2013, 2015, 2019-2020, 2022 Sadie Powell <sadie@witchery.services>
  *   Copyright (C) 2013 Adam <Adam@anope.org>
  *   Copyright (C) 2012-2013, 2015 Attila Molnar <attilamolnar@hush.com>
  *   Copyright (C) 2012 Robby <robby@chatbelgie.be>
  *   Copyright (C) 2012 ChrisTX <xpipe@hotmail.de>
- *   Copyright (C) 2010 Craig Edwards <brain@inspircd.org>
  *   Copyright (C) 2009-2010 Daniel De Graaf <danieldg@inspircd.org>
  *
  * This file is part of InspIRCd.  InspIRCd is free software: you can
@@ -30,7 +29,7 @@
 bool ModuleManager::Load(const std::string& modname, bool defer)
 {
 	/* Don't allow people to specify paths for modules, it doesn't work as expected */
-	if (modname.find('/') != std::string::npos)
+	if (modname.find_first_of("\\/") != std::string::npos)
 	{
 		LastModuleError = "You can't load modules with a path: " + modname;
 		return false;
@@ -54,7 +53,7 @@ bool ModuleManager::Load(const std::string& modname, bool defer)
 	}
 
 	Module* newmod = NULL;
-	DLLManager* newhandle = new DLLManager(moduleFile.c_str());
+	DLLManager* newhandle = new DLLManager(moduleFile);
 	ServiceList newservices;
 	if (!defer)
 		this->NewServices = &newservices;
@@ -133,7 +132,12 @@ void ModuleManager::LoadCoreModules(std::map<std::string, ServiceList>& servicem
 	std::vector<std::string> files;
 	if (!FileSystem::GetFileList(ServerInstance->Config->Paths.Module, files, "core_*.so"))
 	{
-		std::cout << "failed!" << std::endl;
+#ifdef _WIN32
+		const std::string errmsg = GetErrorMessage(GetLastError());
+#else
+		const char* errmsg = strerror(errno);
+#endif
+		std::cout << "failed: " << errmsg << "!" << std::endl;
 		ServerInstance->Exit(EXIT_STATUS_MODULE);
 	}
 

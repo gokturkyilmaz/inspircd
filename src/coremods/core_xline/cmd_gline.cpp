@@ -2,7 +2,7 @@
  * InspIRCd -- Internet Relay Chat Daemon
  *
  *   Copyright (C) 2019 Matt Schatz <genius3000@g3k.solutions>
- *   Copyright (C) 2018, 2021 Sadie Powell <sadie@witchery.services>
+ *   Copyright (C) 2018, 2021-2022 Sadie Powell <sadie@witchery.services>
  *   Copyright (C) 2018 linuxdaemon <linuxdaemon.irc@gmail.com>
  *   Copyright (C) 2012, 2019 Robby <robby@chatbelgie.be>
  *   Copyright (C) 2012, 2014 Attila Molnar <attilamolnar@hush.com>
@@ -10,7 +10,7 @@
  *   Copyright (C) 2009 Daniel De Graaf <danieldg@inspircd.org>
  *   Copyright (C) 2007-2008 Robin Burchell <robin+git@viroteck.net>
  *   Copyright (C) 2007 Dennis Friis <peavey@inspircd.org>
- *   Copyright (C) 2006-2008, 2010 Craig Edwards <brain@inspircd.org>
+ *   Copyright (C) 2006-2008 Craig Edwards <brain@inspircd.org>
  *
  * This file is part of InspIRCd.  InspIRCd is free software: you can
  * redistribute it and/or modify it under the terms of the GNU General Public
@@ -34,15 +34,17 @@ CommandGline::CommandGline(Module* parent)
 	: Command(parent, "GLINE", 1, 3)
 {
 	flags_needed = 'o';
-	syntax = "<user@host> [<duration> :<reason>]";
+	syntax = "<user@host>[,<user@host>]+ [<duration> :<reason>]";
 }
 
 /** Handle /GLINE
  */
 CmdResult CommandGline::Handle(User* user, const Params& parameters)
 {
-	std::string target = parameters[0];
+	if (CommandParser::LoopCall(user, this, parameters, 0))
+		return CMD_SUCCESS;
 
+	std::string target = parameters[0];
 	if (parameters.size() >= 3)
 	{
 		IdentHostPair ih;
@@ -63,7 +65,7 @@ CmdResult CommandGline::Handle(User* user, const Params& parameters)
 		}
 
 		InsaneBan::IPHostMatcher matcher;
-		if (InsaneBan::MatchesEveryone(ih.first+"@"+ih.second, matcher, user, "G", "hostmasks"))
+		if (InsaneBan::MatchesEveryone(ih.first + "@" + ih.second, matcher, user, 'G', "hostmasks"))
 			return CMD_FAILURE;
 
 		else if (target.find('!') != std::string::npos)
@@ -78,16 +80,16 @@ CmdResult CommandGline::Handle(User* user, const Params& parameters)
 			user->WriteNotice("*** Invalid duration for G-line.");
 			return CMD_FAILURE;
 		}
-		GLine* gl = new GLine(ServerInstance->Time(), duration, user->nick.c_str(), parameters[2].c_str(), ih.first.c_str(), ih.second.c_str());
+		GLine* gl = new GLine(ServerInstance->Time(), duration, user->nick, parameters[2], ih.first, ih.second);
 		if (ServerInstance->XLines->AddLine(gl, user))
 		{
 			if (!duration)
 			{
-				ServerInstance->SNO->WriteToSnoMask('x', "%s added permanent G-line for %s: %s", user->nick.c_str(), target.c_str(), parameters[2].c_str());
+				ServerInstance->SNO->WriteToSnoMask('x', "%s added a permanent G-line on %s: %s", user->nick.c_str(), target.c_str(), parameters[2].c_str());
 			}
 			else
 			{
-				ServerInstance->SNO->WriteToSnoMask('x', "%s added timed G-line for %s, expires in %s (on %s): %s",
+				ServerInstance->SNO->WriteToSnoMask('x', "%s added a timed G-line on %s, expires in %s (on %s): %s",
 					user->nick.c_str(), target.c_str(), InspIRCd::DurationString(duration).c_str(),
 					InspIRCd::TimeString(ServerInstance->Time() + duration).c_str(), parameters[2].c_str());
 			}

@@ -2,7 +2,7 @@
  * InspIRCd -- Internet Relay Chat Daemon
  *
  *   Copyright (C) 2020 Matt Schatz <genius3000@g3k.solutions>
- *   Copyright (C) 2017-2020 Sadie Powell <sadie@witchery.services>
+ *   Copyright (C) 2017-2020, 2022 Sadie Powell <sadie@witchery.services>
  *   Copyright (C) 2014 Attila Molnar <attilamolnar@hush.com>
  *   Copyright (C) 2012 Robby <robby@chatbelgie.be>
  *   Copyright (C) 2012 ChrisTX <xpipe@hotmail.de>
@@ -10,7 +10,7 @@
  *   Copyright (C) 2009 Uli Schlachter <psychon@inspircd.org>
  *   Copyright (C) 2007 Robin Burchell <robin+git@viroteck.net>
  *   Copyright (C) 2007 Dennis Friis <peavey@inspircd.org>
- *   Copyright (C) 2003, 2006, 2010 Craig Edwards <brain@inspircd.org>
+ *   Copyright (C) 2003, 2006 Craig Edwards <brain@inspircd.org>
  *
  * This file is part of InspIRCd.  InspIRCd is free software: you can
  * redistribute it and/or modify it under the terms of the GNU General Public
@@ -117,19 +117,14 @@ void* DLLManager::GetSymbol(const char* name) const
 
 void DLLManager::RetrieveLastError()
 {
-#if defined _WIN32
-	char errmsg[500];
-	DWORD dwErrorCode = GetLastError();
-	if (FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, dwErrorCode, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)errmsg, _countof(errmsg), NULL) == 0)
-		sprintf_s(errmsg, _countof(errmsg), "Error code: %u", dwErrorCode);
+#ifdef _WIN32
+	err = GetErrorMessage(GetLastError());
 	SetLastError(ERROR_SUCCESS);
-	err = errmsg;
 #else
 	const char* errmsg = dlerror();
 	err = errmsg ? errmsg : "Unknown error";
 #endif
 
-	std::string::size_type p;
-	while ((p = err.find_last_of("\r\n")) != std::string::npos)
-		err.erase(p, 1);
+	for (size_t pos = 0; ((pos = err.find_first_of("\r\n", pos)) != std::string::npos); )
+		err[pos] = ' ';
 }

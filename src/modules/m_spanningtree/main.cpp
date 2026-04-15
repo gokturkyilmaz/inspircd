@@ -4,14 +4,14 @@
  *   Copyright (C) 2021 Herman <GermanAizek@yandex.ru>
  *   Copyright (C) 2020 Matt Schatz <genius3000@g3k.solutions>
  *   Copyright (C) 2019 linuxdaemon <linuxdaemon.irc@gmail.com>
- *   Copyright (C) 2013, 2017-2021 Sadie Powell <sadie@witchery.services>
+ *   Copyright (C) 2013, 2017-2023 Sadie Powell <sadie@witchery.services>
  *   Copyright (C) 2013, 2016 Adam <Adam@anope.org>
  *   Copyright (C) 2012-2016, 2018 Attila Molnar <attilamolnar@hush.com>
  *   Copyright (C) 2012 Robby <robby@chatbelgie.be>
  *   Copyright (C) 2009-2010 Daniel De Graaf <danieldg@inspircd.org>
  *   Copyright (C) 2007-2009 Robin Burchell <robin+git@viroteck.net>
  *   Copyright (C) 2007-2009 Dennis Friis <peavey@inspircd.org>
- *   Copyright (C) 2005, 2007-2010 Craig Edwards <brain@inspircd.org>
+ *   Copyright (C) 2005, 2007-2009 Craig Edwards <brain@inspircd.org>
  *
  * This file is part of InspIRCd.  InspIRCd is free software: you can
  * redistribute it and/or modify it under the terms of the GNU General Public
@@ -286,7 +286,7 @@ void ModuleSpanningTree::DoConnectTimeout(time_t curtime)
 			Utils->timeoutlist.erase(me);
 			s->Close();
 		}
-		else if (curtime > s->age + p.second)
+		else if (curtime > s->age + (time_t)p.second)
 		{
 			ServerInstance->SNO->WriteToSnoMask('l',"CONNECT: Error connecting \002%s\002 (timeout of %u seconds)",p.first.c_str(),p.second);
 			Utils->timeoutlist.erase(me);
@@ -376,7 +376,7 @@ ModResult ModuleSpanningTree::OnPreTopicChange(User* user, Channel* chan, const 
 	// other servers will drop our FTOPIC. This restriction will be removed when the protocol is updated.
 	if ((chan->topicset >= ServerInstance->Time()) && (Utils->serverlist.size() > 1))
 	{
-		user->WriteNumeric(ERR_CHANOPRIVSNEEDED, chan->name, "Retry topic change later");
+		user->WriteNumeric(ERR_UNAVAILRESOURCE, chan->name, "Retry topic change later");
 		return MOD_RES_DENY;
 	}
 	return MOD_RES_PASSTHRU;
@@ -485,6 +485,12 @@ void ModuleSpanningTree::OnUserConnect(LocalUser* user)
 
 	if (user->IsOper())
 		CommandOpertype::Builder(user).Broadcast();
+
+	if (user->IsAway())
+		CommandAway::Builder(user).Broadcast();
+
+	if (user->uniqueusername) // TODO: convert this to BooleanExtItem in v4.
+		CommandMetadata::Builder(user, "uniqueusername", "1").Broadcast();
 
 	for(Extensible::ExtensibleStore::const_iterator i = user->GetExtList().begin(); i != user->GetExtList().end(); i++)
 	{

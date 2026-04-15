@@ -1,11 +1,10 @@
 /*
  * InspIRCd -- Internet Relay Chat Daemon
  *
- *   Copyright (C) 2019 Sadie Powell <sadie@witchery.services>
+ *   Copyright (C) 2019, 2022 Sadie Powell <sadie@witchery.services>
  *   Copyright (C) 2014-2015 Attila Molnar <attilamolnar@hush.com>
  *   Copyright (C) 2012 Robby <robby@chatbelgie.be>
  *   Copyright (C) 2009-2010 Daniel De Graaf <danieldg@inspircd.org>
- *   Copyright (C) 2009 Uli Schlachter <psychon@inspircd.org>
  *   Copyright (C) 2008 Robin Burchell <robin+git@viroteck.net>
  *   Copyright (C) 2008 Craig Edwards <brain@inspircd.org>
  *
@@ -68,9 +67,9 @@ bool irc::sockets::MatchCIDR(const std::string &address, const std::string &cidr
 	}
 
 	const std::string::size_type per_pos = cidr_copy.rfind('/');
-	if ((per_pos == std::string::npos) || (per_pos == cidr_copy.length()-1)
+	if ((per_pos != std::string::npos) && ((per_pos == cidr_copy.length()-1)
 		|| (cidr_copy.find_first_not_of("0123456789", per_pos+1) != std::string::npos)
-		|| (cidr_copy.find_first_not_of("0123456789abcdefABCDEF.:") < per_pos))
+		|| (cidr_copy.find_first_not_of("0123456789abcdefABCDEF.:") < per_pos)))
 	{
 		// The CIDR mask is invalid
 		return false;

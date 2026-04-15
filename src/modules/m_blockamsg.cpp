@@ -1,13 +1,13 @@
 /*
  * InspIRCd -- Internet Relay Chat Daemon
  *
- *   Copyright (C) 2013, 2018 Sadie Powell <sadie@witchery.services>
+ *   Copyright (C) 2013, 2018, 2022 Sadie Powell <sadie@witchery.services>
  *   Copyright (C) 2012-2016 Attila Molnar <attilamolnar@hush.com>
  *   Copyright (C) 2012, 2019 Robby <robby@chatbelgie.be>
  *   Copyright (C) 2009 Daniel De Graaf <danieldg@inspircd.org>
  *   Copyright (C) 2007-2008 Dennis Friis <peavey@inspircd.org>
- *   Copyright (C) 2006, 2010 Craig Edwards <brain@inspircd.org>
  *   Copyright (C) 2006 Oliver Lupton <om@inspircd.org>
+ *   Copyright (C) 2006 Craig Edwards <brain@inspircd.org>
  *
  * This file is part of InspIRCd.  InspIRCd is free software: you can
  * redistribute it and/or modify it under the terms of the GNU General Public
@@ -91,6 +91,9 @@ class ModuleBlockAmsg : public Module
 
 		if ((validated) && (parameters.size() >= 2) && ((command == "PRIVMSG") || (command == "NOTICE")))
 		{
+			if (user->HasPrivPermission("servers/ignore-blockamsg"))
+				return MOD_RES_PASSTHRU;
+
 			// parameters[0] is the target list, count how many channels are there
 			unsigned int targets = 0;
 			// Is the first target a channel?
@@ -118,7 +121,7 @@ class ModuleBlockAmsg : public Module
 			// OR
 			// The number of target channels is equal to the number of channels the sender is on..a little suspicious.
 			// Check it's more than 1 too, or else users on one channel would have fun.
-			if ((m && (m->message == parameters[1]) && (!irc::equals(m->target, parameters[0])) && ForgetDelay && (m->sent >= ServerInstance->Time()-ForgetDelay)) || ((targets > 1) && (targets == user->chans.size())))
+			if ((m && (m->message == parameters[1]) && (!irc::equals(m->target, parameters[0])) && ForgetDelay && (m->sent >= ServerInstance->Time()-(time_t)ForgetDelay)) || ((targets > 1) && (targets == user->chans.size())))
 			{
 				// Block it...
 				if (action == IBLOCK_KILLOPERS || action == IBLOCK_NOTICEOPERS)

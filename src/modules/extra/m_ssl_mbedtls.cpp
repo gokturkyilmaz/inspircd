@@ -2,7 +2,7 @@
  * InspIRCd -- Internet Relay Chat Daemon
  *
  *   Copyright (C) 2020 Matt Schatz <genius3000@g3k.solutions>
- *   Copyright (C) 2016-2021 Sadie Powell <sadie@witchery.services>
+ *   Copyright (C) 2016-2024 Sadie Powell <sadie@witchery.services>
  *   Copyright (C) 2016-2017 Attila Molnar <attilamolnar@hush.com>
  *
  * This file is part of InspIRCd.  InspIRCd is free software: you can
@@ -22,12 +22,16 @@
 
 /// $PackageInfo: require_system("arch") mbedtls
 /// $PackageInfo: require_system("darwin") mbedtls
-/// $PackageInfo: require_system("debian" "9.0") libmbedtls-dev
-/// $PackageInfo: require_system("ubuntu" "16.04") libmbedtls-dev
+/// $PackageInfo: require_system("debian") libmbedtls-dev
+/// $PackageInfo: require_system("ubuntu") libmbedtls-dev
 
 
 #include "inspircd.h"
 #include "modules/ssl.h"
+
+#ifdef _WIN32
+# define timegm _mkgmtime
+#endif
 
 // Fix warnings about the use of commas at end of enumerator lists on C++03.
 #if defined __clang__
@@ -40,9 +44,10 @@
 # endif
 #endif
 
-// Temporary fix for mbedTLS v3 not allowing access to grp_id without any
-// replacement API.
-#define MBEDTLS_ALLOW_PRIVATE_ACCESS
+// Work around mbedTLS using C99 features that are not part of C++.
+#ifdef __clang__
+# pragma clang diagnostic ignored "-Wc99-extensions"
+#endif
 
 #include <mbedtls/ctr_drbg.h>
 #include <mbedtls/dhm.h>
@@ -182,7 +187,11 @@ namespace mbedTLS
 
 	class Curves
 	{
+#if MBEDTLS_VERSION_MAJOR >= 3
+		std::vector<uint16_t> list;
+#else
 		std::vector<mbedtls_ecp_group_id> list;
+#endif
 
 	 public:
 		Curves(const std::string& str)
@@ -193,12 +202,21 @@ namespace mbedTLS
 				const mbedtls_ecp_curve_info* curve = mbedtls_ecp_curve_info_from_name(token.c_str());
 				if (!curve)
 					throw Exception("Unknown curve " + token);
+#if MBEDTLS_VERSION_MAJOR >= 3
+				list.push_back(curve->tls_id);
+#else
 				list.push_back(curve->grp_id);
+#endif
 			}
 			list.push_back(MBEDTLS_ECP_DP_NONE);
 		}
 
+#if MBEDTLS_VERSION_MAJOR >= 3
+		const uint16_t* get() const { return &list.front(); }
+#else
 		const mbedtls_ecp_group_id* get() const { return &list.front(); }
+#endif
+
 		bool empty() const { return (list.size() <= 1); }
 	};
 
@@ -248,12 +266,10 @@ namespace mbedTLS
 			bool found = false;
 			for (mbedtls_x509_crt* cert = certs.get(); cert; cert = cert->next)
 			{
-
 #if MBEDTLS_VERSION_MAJOR >= 3
 				if (mbedtls_pk_check_pair(&cert->pk, key.get(), mbedtls_ctr_drbg_random, 0) == 0)
 #else
 				if (mbedtls_pk_check_pair(&cert->pk, key.get()) == 0)
-
 #endif
 				{
 					found = true;
@@ -324,7 +340,11 @@ namespace mbedTLS
 
 		void SetCurves(const Curves& curves)
 		{
+#if MBEDTLS_VERSION_MAJOR >= 3
+			mbedtls_ssl_conf_groups(&conf, curves.get());
+#else
 			mbedtls_ssl_conf_curves(&conf, curves.get());
+#endif
 		}
 
 		void SetVersion(int minver, int maxver)
@@ -620,6 +640,8 @@ class mbedTLSIOHook : public SSLIOHook
 			return;
 		}
 
+		certificate->activation = GetTime(&cert->valid_from);
+		certificate->expiration = GetTime(&cert->valid_to);
 		if (flags == 0)
 		{
 			// Verification succeeded
@@ -629,8 +651,10 @@ class mbedTLSIOHook : public SSLIOHook
 		{
 			// Verification failed
 			certificate->trusted = false;
-			if ((flags & MBEDTLS_X509_BADCERT_EXPIRED) || (flags & MBEDTLS_X509_BADCERT_FUTURE))
-				certificate->error = "Not activated, or expired certificate";
+			if (flags & MBEDTLS_X509_BADCERT_FUTURE)
+				certificate->error = "Certificate not activated";
+			else if (flags & MBEDTLS_X509_BADCERT_EXPIRED)
+				certificate->error = "Certificate has expired";
 		}
 
 		certificate->unknownsigner = (flags & MBEDTLS_X509_BADCERT_NOT_TRUSTED);
@@ -651,6 +675,21 @@ class mbedTLSIOHook : public SSLIOHook
 		out.assign(buf, ret);
 		for (size_t pos = 0; ((pos = out.find_first_of("\r\n", pos)) != std::string::npos); )
 			out[pos] = ' ';
+	}
+
+	static time_t GetTime(const mbedtls_x509_time* x509time)
+	{
+		// HACK: this is terrible but there's no sensible way I can see to get
+		// a time_t from this.
+		tm ts;
+		ts.tm_year = x509time->year - 1900;
+		ts.tm_mon  = x509time->mon  - 1;
+		ts.tm_mday = x509time->day;
+		ts.tm_hour = x509time->hour;
+		ts.tm_min  = x509time->min;
+		ts.tm_sec  = x509time->sec;
+
+		return timegm(&ts);
 	}
 
 	static int Pull(void* userptr, unsigned char* buffer, size_t size)

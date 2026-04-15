@@ -2,14 +2,14 @@
  * InspIRCd -- Internet Relay Chat Daemon
  *
  *   Copyright (C) 2019 linuxdaemon <linuxdaemon.irc@gmail.com>
- *   Copyright (C) 2013, 2018-2020 Sadie Powell <sadie@witchery.services>
+ *   Copyright (C) 2013, 2018-2020, 2022-2023 Sadie Powell <sadie@witchery.services>
  *   Copyright (C) 2013 Adam <Adam@anope.org>
  *   Copyright (C) 2012-2016, 2018 Attila Molnar <attilamolnar@hush.com>
  *   Copyright (C) 2012, 2019 Robby <robby@chatbelgie.be>
  *   Copyright (C) 2009-2010 Daniel De Graaf <danieldg@inspircd.org>
  *   Copyright (C) 2008, 2012 Robin Burchell <robin+git@viroteck.net>
- *   Copyright (C) 2007-2008, 2010 Craig Edwards <brain@inspircd.org>
  *   Copyright (C) 2007-2008 Dennis Friis <peavey@inspircd.org>
+ *   Copyright (C) 2007-2008 Craig Edwards <brain@inspircd.org>
  *
  * This file is part of InspIRCd.  InspIRCd is free software: you can
  * redistribute it and/or modify it under the terms of the GNU General Public
@@ -190,6 +190,11 @@ void TreeSocket::ProcessLine(std::string &line)
 			{
 				this->Capab(params);
 			}
+			else
+			{
+				ServerInstance->Logs->Log(MODNAME, LOG_DEBUG, "Unknown command from fd %d in the WAIT_AUTH_2 phase: %s",
+					GetFd(), command.c_str());
+			}
 
 		break;
 		case CONNECTING:
@@ -212,7 +217,13 @@ void TreeSocket::ProcessLine(std::string &line)
 			{
 				this->Capab(params);
 			}
+			else
+			{
+				ServerInstance->Logs->Log(MODNAME, LOG_DEBUG, "Unknown command from fd %d in the CONNECTING phase: %s",
+					GetFd(), command.c_str());
+			}
 		break;
+
 		case CONNECTED:
 			/*
 			 * State CONNECTED:
@@ -221,6 +232,7 @@ void TreeSocket::ProcessLine(std::string &line)
 			 */
 			this->ProcessConnectedLine(tags, prefix, command, params);
 		break;
+
 		case DYING:
 		break;
 	}

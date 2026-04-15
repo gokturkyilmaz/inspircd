@@ -1,13 +1,13 @@
 /*
  * InspIRCd -- Internet Relay Chat Daemon
  *
- *   Copyright (C) 2013-2014, 2017-2019, 2021 Sadie Powell <sadie@witchery.services>
+ *   Copyright (C) 2013-2014, 2017-2019, 2021-2024 Sadie Powell <sadie@witchery.services>
  *   Copyright (C) 2013 Adam <Adam@anope.org>
  *   Copyright (C) 2012-2016 Attila Molnar <attilamolnar@hush.com>
  *   Copyright (C) 2012 Robby <robby@chatbelgie.be>
  *   Copyright (C) 2009-2010 Daniel De Graaf <danieldg@inspircd.org>
  *   Copyright (C) 2008-2009 Robin Burchell <robin+git@viroteck.net>
- *   Copyright (C) 2007-2008, 2010 Craig Edwards <brain@inspircd.org>
+ *   Copyright (C) 2007-2008 Craig Edwards <brain@inspircd.org>
  *   Copyright (C) 2007 Dennis Friis <peavey@inspircd.org>
  *
  * This file is part of InspIRCd.  InspIRCd is free software: you can
@@ -211,9 +211,10 @@ void SpanningTreeUtilities::RefreshIPCache()
 	for (std::vector<reference<Link> >::iterator i = LinkBlocks.begin(); i != LinkBlocks.end(); ++i)
 	{
 		Link* L = *i;
-		if (!L->Port)
+		bool isunix = L->IPAddr.find('/') != std::string::npos;
+		if (!L->Port && !isunix)
 		{
-			ServerInstance->Logs->Log(MODNAME, LOG_DEFAULT, "Ignoring a link block without a port.");
+			ServerInstance->Logs->Log(MODNAME, LOG_DEFAULT, "Ignoring an IP link block without a port.");
 			/* Invalid link block */
 			continue;
 		}
@@ -222,7 +223,7 @@ void SpanningTreeUtilities::RefreshIPCache()
 
 		irc::sockets::sockaddrs dummy;
 		bool ipvalid = irc::sockets::aptosa(L->IPAddr, L->Port, dummy);
-		if ((L->IPAddr == "*") || (ipvalid))
+		if ((L->IPAddr == "*") || (isunix) || (ipvalid))
 			ValidIPs.push_back(L->IPAddr);
 		else if (this->Creator->DNS)
 		{
@@ -267,9 +268,19 @@ void SpanningTreeUtilities::ReadConfiguration()
 		for (std::string s; sep.GetToken(s);)
 			L->AllowMasks.push_back(s);
 
+		const std::string path = tag->getString("path");
+		if (path.empty())
+		{
+			L->IPAddr = tag->getString("ipaddr");
+			L->Port = tag->getUInt("port", 0, 1, 65535);
+		}
+		else
+		{
+			L->IPAddr = ServerInstance->Config->Paths.PrependData(path);
+			L->Port = 0;
+		}
+
 		L->Name = tag->getString("name");
-		L->IPAddr = tag->getString("ipaddr");
-		L->Port = tag->getUInt("port", 0);
 		L->SendPass = tag->getString("sendpass", tag->getString("password"));
 		L->RecvPass = tag->getString("recvpass", tag->getString("password"));
 		L->Fingerprint = tag->getString("fingerprint");
@@ -309,7 +320,9 @@ void SpanningTreeUtilities::ReadConfiguration()
 		if (!L->Port && L->IPAddr.find('/') == std::string::npos)
 			ServerInstance->Logs->Log(MODNAME, LOG_DEFAULT, "Configuration warning: Link block '" + L->Name + "' has no port defined, you will not be able to /connect it.");
 
+		std::transform(L->Fingerprint.begin(), L->Fingerprint.end(), L->Fingerprint.begin(), ::tolower);
 		L->Fingerprint.erase(std::remove(L->Fingerprint.begin(), L->Fingerprint.end(), ':'), L->Fingerprint.end());
+
 		LinkBlocks.push_back(L);
 	}
 

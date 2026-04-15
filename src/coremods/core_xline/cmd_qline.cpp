@@ -2,16 +2,15 @@
  * InspIRCd -- Internet Relay Chat Daemon
  *
  *   Copyright (C) 2019 Matt Schatz <genius3000@g3k.solutions>
+ *   Copyright (C) 2018, 2022 Sadie Powell <sadie@witchery.services>
  *   Copyright (C) 2018 linuxdaemon <linuxdaemon.irc@gmail.com>
- *   Copyright (C) 2018 Sadie Powell <sadie@witchery.services>
  *   Copyright (C) 2014 Attila Molnar <attilamolnar@hush.com>
  *   Copyright (C) 2012, 2019 Robby <robby@chatbelgie.be>
- *   Copyright (C) 2009 Uli Schlachter <psychon@inspircd.org>
  *   Copyright (C) 2009 Daniel De Graaf <danieldg@inspircd.org>
  *   Copyright (C) 2008 Thomas Stagner <aquanight@inspircd.org>
  *   Copyright (C) 2007 Robin Burchell <robin+git@viroteck.net>
  *   Copyright (C) 2007 Dennis Friis <peavey@inspircd.org>
- *   Copyright (C) 2006-2008, 2010 Craig Edwards <brain@inspircd.org>
+ *   Copyright (C) 2006-2008 Craig Edwards <brain@inspircd.org>
  *
  * This file is part of InspIRCd.  InspIRCd is free software: you can
  * redistribute it and/or modify it under the terms of the GNU General Public
@@ -35,15 +34,18 @@ CommandQline::CommandQline(Module* parent)
 	: Command(parent, "QLINE", 1, 3)
 {
 	flags_needed = 'o';
-	syntax = "<nickmask> [<duration> :<reason>]";
+	syntax = "<nickmask>[,<nickmask>]+ [<duration> :<reason>]";
 }
 
 CmdResult CommandQline::Handle(User* user, const Params& parameters)
 {
+	if (CommandParser::LoopCall(user, this, parameters, 0))
+		return CMD_SUCCESS;
+
 	if (parameters.size() >= 3)
 	{
 		NickMatcher matcher;
-		if (InsaneBan::MatchesEveryone(parameters[0], matcher, user, "Q", "nickmasks"))
+		if (InsaneBan::MatchesEveryone(parameters[0], matcher, user, 'Q', "nickmasks"))
 			return CMD_FAILURE;
 
 		if (parameters[0].find('@') != std::string::npos || parameters[0].find('!') != std::string::npos || parameters[0].find('.') != std::string::npos)
@@ -58,16 +60,16 @@ CmdResult CommandQline::Handle(User* user, const Params& parameters)
 			user->WriteNotice("*** Invalid duration for Q-line.");
 			return CMD_FAILURE;
 		}
-		QLine* ql = new QLine(ServerInstance->Time(), duration, user->nick.c_str(), parameters[2].c_str(), parameters[0].c_str());
+		QLine* ql = new QLine(ServerInstance->Time(), duration, user->nick, parameters[2], parameters[0]);
 		if (ServerInstance->XLines->AddLine(ql,user))
 		{
 			if (!duration)
 			{
-				ServerInstance->SNO->WriteToSnoMask('x', "%s added permanent Q-line for %s: %s", user->nick.c_str(), parameters[0].c_str(), parameters[2].c_str());
+				ServerInstance->SNO->WriteToSnoMask('x', "%s added a permanent Q-line on %s: %s", user->nick.c_str(), parameters[0].c_str(), parameters[2].c_str());
 			}
 			else
 			{
-				ServerInstance->SNO->WriteToSnoMask('x', "%s added timed Q-line for %s, expires in %s (on %s): %s",
+				ServerInstance->SNO->WriteToSnoMask('x', "%s added a timed Q-line on %s, expires in %s (on %s): %s",
 					user->nick.c_str(), parameters[0].c_str(), InspIRCd::DurationString(duration).c_str(),
 					InspIRCd::TimeString(ServerInstance->Time() + duration).c_str(), parameters[2].c_str());
 			}

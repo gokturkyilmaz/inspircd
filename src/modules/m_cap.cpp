@@ -1,7 +1,7 @@
 /*
  * InspIRCd -- Internet Relay Chat Daemon
  *
- *   Copyright (C) 2018-2020 Sadie Powell <sadie@witchery.services>
+ *   Copyright (C) 2018-2020, 2022 Sadie Powell <sadie@witchery.services>
  *   Copyright (C) 2015-2016, 2018 Attila Molnar <attilamolnar@hush.com>
  *
  * This file is part of InspIRCd.  InspIRCd is free software: you can
@@ -490,13 +490,11 @@ class ModuleCap : public Module
  private:
 	CommandCap cmd;
 	PoisonCap poisoncap;
-	Cap::Capability stdrplcap;
 
  public:
 	ModuleCap()
 		: cmd(this)
 		, poisoncap(this)
-		, stdrplcap(this, "inspircd.org/standard-replies")
 	{
 	}
 
@@ -507,7 +505,7 @@ class ModuleCap : public Module
 
 	Version GetVersion() CXX11_OVERRIDE
 	{
-		return Version("Implements support for the IRCv3 Client Capability Negotiation extension.", VF_VENDOR);
+		return Version("Provides support for the IRCv3 Client Capability Negotiation extension.", VF_VENDOR);
 	}
 };
 

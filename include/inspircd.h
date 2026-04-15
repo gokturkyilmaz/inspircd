@@ -5,7 +5,7 @@
  *   Copyright (C) 2018 linuxdaemon <linuxdaemon.irc@gmail.com>
  *   Copyright (C) 2013 Daniel Vassdal <shutter@canternet.org>
  *   Copyright (C) 2012-2016, 2018 Attila Molnar <attilamolnar@hush.com>
- *   Copyright (C) 2012-2014, 2017-2019 Sadie Powell <sadie@witchery.services>
+ *   Copyright (C) 2012-2014, 2017-2019, 2022-2023 Sadie Powell <sadie@witchery.services>
  *   Copyright (C) 2012, 2019 Robby <robby@chatbelgie.be>
  *   Copyright (C) 2012 ChrisTX <xpipe@hotmail.de>
  *   Copyright (C) 2009-2010 Daniel De Graaf <danieldg@inspircd.org>
@@ -13,7 +13,7 @@
  *   Copyright (C) 2007-2009 Dennis Friis <peavey@inspircd.org>
  *   Copyright (C) 2007-2008 Robin Burchell <robin+git@viroteck.net>
  *   Copyright (C) 2007 Oliver Lupton <om@inspircd.org>
- *   Copyright (C) 2005-2008, 2010 Craig Edwards <brain@inspircd.org>
+ *   Copyright (C) 2005-2008 Craig Edwards <brain@inspircd.org>
  *
  * This file is part of InspIRCd.  InspIRCd is free software: you can
  * redistribute it and/or modify it under the terms of the GNU General Public
@@ -192,7 +192,7 @@ class CoreExport InspIRCd
 	struct timespec TIME;
 
 	/** A 64k buffer used to read socket data into
-	 * NOTE: update ValidateNetBufferSize if you change this
+	 * Update the range of <performance:netbuffersize> if you change this
 	 */
 	char ReadBuffer[65535];
 
@@ -390,9 +390,16 @@ class CoreExport InspIRCd
 
 	/** Determines whether a hostname is valid according to RFC 5891 rules.
 	 * @param host The hostname to validate.
+	 * @param allowsimple Whether to allow simple hostnames (e.g. localhost).
 	 * @return True if the hostname is valid; otherwise, false.
 	 */
-	static bool IsHost(const std::string& host);
+	static bool IsHost2(const std::string& host, bool allowsimple);
+
+	/** Determines whether a hostname is valid according to RFC 5891 rules.
+	 * @param host The hostname to validate.
+	 * @return True if the hostname is valid; otherwise, false.
+	 */
+	inline static bool IsHost(const std::string& host) { return IsHost2(host, false); }
 
 	/** Return true if str looks like a server ID
 	 * @param sid string to check against
@@ -416,6 +423,14 @@ class CoreExport InspIRCd
 	 * (See the ExitStatus enum for valid values)
 	 */
 	void Exit(int status);
+
+	 /** Causes the server to exit immediately.
+	 *
+	 * @param status The exit code to give to the operating system
+	 * (See the ExitStatus enum for valid values)
+	 */
+	 static void QuickExit(int status);
+
 
 	/** Formats the input string with the specified arguments.
 	* @param formatString The string to format

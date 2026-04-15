@@ -5,13 +5,12 @@
  *   Copyright (C) 2019 linuxdaemon <linuxdaemon.irc@gmail.com>
  *   Copyright (C) 2013 Daniel Vassdal <shutter@canternet.org>
  *   Copyright (C) 2012-2016, 2018 Attila Molnar <attilamolnar@hush.com>
- *   Copyright (C) 2012-2013, 2016-2021 Sadie Powell <sadie@witchery.services>
+ *   Copyright (C) 2012-2013, 2016-2022 Sadie Powell <sadie@witchery.services>
  *   Copyright (C) 2012, 2019 Robby <robby@chatbelgie.be>
  *   Copyright (C) 2012 DjSlash <djslash@djslash.org>
  *   Copyright (C) 2012 ChrisTX <xpipe@hotmail.de>
  *   Copyright (C) 2011 jackmcbarn <jackmcbarn@inspircd.org>
  *   Copyright (C) 2009-2010 Daniel De Graaf <danieldg@inspircd.org>
- *   Copyright (C) 2009 Uli Schlachter <psychon@inspircd.org>
  *   Copyright (C) 2008 Thomas Stagner <aquanight@inspircd.org>
  *   Copyright (C) 2008 John Brooks <special@inspircd.org>
  *   Copyright (C) 2007, 2009 Dennis Friis <peavey@inspircd.org>
@@ -398,9 +397,9 @@ class CoreExport User : public Extensible
 	/** Sets the client IP for this user
 	 * @return true if the conversion was successful
 	 */
-	virtual bool SetClientIP(const std::string& address);
-
 	virtual void SetClientIP(const irc::sockets::sockaddrs& sa);
+
+	DEPRECATED_METHOD(virtual bool SetClientIP(const std::string& address));
 
 	/** Constructor
 	 * @throw CoreException if the UID allocated to the user already exists
@@ -850,9 +849,10 @@ class CoreExport LocalUser : public User, public insp::intrusive_list_node<Local
 	 */
 	void SetClass(const std::string &explicit_name = "");
 
-	bool SetClientIP(const std::string& address) CXX11_OVERRIDE;
-
+	/** @copydoc User::SetClientIP */
 	void SetClientIP(const irc::sockets::sockaddrs& sa) CXX11_OVERRIDE;
+
+	DEPRECATED_METHOD(bool SetClientIP(const std::string& address) CXX11_OVERRIDE);
 
 	/** Send a NOTICE message from the local server to the user.
 	 * The message will be sent even if the user is connected to a remote server.

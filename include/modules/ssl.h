@@ -4,7 +4,7 @@
  *   Copyright (C) 2020 Matt Schatz <genius3000@g3k.solutions>
  *   Copyright (C) 2019 B00mX0r <b00mx0r@aureus.pw>
  *   Copyright (C) 2018 Dylan Frank <b00mx0r@aureus.pw>
- *   Copyright (C) 2013, 2017-2019, 2021 Sadie Powell <sadie@witchery.services>
+ *   Copyright (C) 2013, 2017-2019, 2021-2023 Sadie Powell <sadie@witchery.services>
  *   Copyright (C) 2013, 2015-2016 Attila Molnar <attilamolnar@hush.com>
  *   Copyright (C) 2012 Robby <robby@chatbelgie.be>
  *   Copyright (C) 2012 ChrisTX <xpipe@hotmail.de>
@@ -47,8 +47,17 @@ class ssl_cert : public refcountbase
 	std::string error;
 	std::string fingerprint;
 	bool trusted, invalid, unknownsigner, revoked;
+	time_t activation, expiration;
 
-	ssl_cert() : trusted(false), invalid(true), unknownsigner(true), revoked(false) {}
+	ssl_cert()
+		: trusted(false)
+		, invalid(true)
+		, unknownsigner(true)
+		, revoked(false)
+		, activation(0)
+		, expiration(0)
+	{
+	}
 
 	/** Get certificate distinguished name
 	 * @return Certificate DN
@@ -137,6 +146,22 @@ class ssl_cert : public refcountbase
 		return IsUsable() && trusted && !unknownsigner;
 	}
 
+	/** Retrieves the client certificate activation time.
+	 * @return The time the client certificate was activated or 0 on error.
+	 */
+	time_t GetActivationTime() const
+	{
+		return activation;
+	}
+
+	/** Retrieves the client certificate expiration time.
+	 * @return The time the client certificate will expire or 0 on error.
+	 */
+	time_t GetExpirationTime() const
+	{
+		return expiration;
+	}
+
 	std::string GetMetaLine() const
 	{
 		std::stringstream value;
@@ -221,6 +246,7 @@ class SSLIOHook : public IOHook
 
 	SSLIOHook(IOHookProvider* hookprov)
 		: IOHook(hookprov)
+		, status(STATUS_NONE)
 	{
 	}
 

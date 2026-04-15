@@ -1,7 +1,7 @@
 /*
  * InspIRCd -- Internet Relay Chat Daemon
  *
- *   Copyright (C) 2017 Sadie Powell <sadie@witchery.services>
+ *   Copyright (C) 2017, 2022 Sadie Powell <sadie@witchery.services>
  *
  * This file is part of InspIRCd.  InspIRCd is free software: you can
  * redistribute it and/or modify it under the terms of the GNU General Public
@@ -19,9 +19,12 @@
 
 #include <iostream>
 
-#if defined __INTEL_COMPILER // Also defines __clang__ and __GNUC__
+#if defined __INTEL_COMPILER // Also defines  __GNUC__
 # define INSPIRCD_COMPILER_NAME "Intel"
 # define INSPIRCD_COMPILER_VERSION (__INTEL_COMPILER / 100) << '.' << (__INTEL_COMPILER % 100)
+#elif defined __INTEL_CLANG_COMPILER // Also defines __clang__
+# define INSPIRCD_COMPILER_NAME "IntelClang"
+# define INSPIRCD_COMPILER_VERSION (__INTEL_CLANG_COMPILER / 10000) << '.' << ((__INTEL_CLANG_COMPILER % 10000) / 100)
 #elif defined __clang__ // Also defines __GNUC__
 # if defined __apple_build_version__
 #  define INSPIRCD_COMPILER_NAME "AppleClang"

@@ -2,7 +2,7 @@
 # InspIRCd -- Internet Relay Chat Daemon
 #
 #   Copyright (C) 2020 Nicole Kleinhoff <ilbelkyr@shalture.org>
-#   Copyright (C) 2013-2021 Sadie Powell <sadie@witchery.services>
+#   Copyright (C) 2013-2022 Sadie Powell <sadie@witchery.services>
 #   Copyright (C) 2012 Robby <robby@chatbelgie.be>
 #   Copyright (C) 2007-2008 Craig Edwards <brain@inspircd.org>
 #   Copyright (C) 2007 Dennis Friis <peavey@inspircd.org>
@@ -176,11 +176,11 @@ non-interactive configuration is started and any omitted values are defaulted.
 
   <|BOLD CXX=<NAME>|>                    Sets the C++ compiler to use when building the
                                 server. If not specified then the build system
-                                will search for c++, g++, clang++ or icpc.
+                                will search for c++, g++, clang++, icpx, or icpc.
   <|BOLD INSPIRCD_VERBOSE=<0|1>|>        Shows additional information for debugging.
 
 If you have any problems with configuring InspIRCd then visit our IRC channel
-at irc.inspircd.org #InspIRCd or create a support discussion at
+at ircs://irc.teranova.net/inspircd or create a support discussion at
 https://github.com/inspircd/inspircd/discussions.
 
 Packagers: see https://docs.inspircd.org/packaging/ for packaging advice.
@@ -266,7 +266,7 @@ sub get_compiler_info($) {
 }
 
 sub find_compiler {
-	my @compilers = qw(c++ g++ clang++ icpc);
+	my @compilers = qw(c++ g++ clang++ icpx icpc);
 	for my $compiler (shift // @compilers) {
 		return $compiler if __test_compiler $compiler;
 		return "xcrun $compiler" if $^O eq 'darwin' && __test_compiler "xcrun $compiler";

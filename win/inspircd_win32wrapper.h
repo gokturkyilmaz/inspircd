@@ -3,7 +3,7 @@
  *
  *   Copyright (C) 2020 Matt Schatz <genius3000@g3k.solutions>
  *   Copyright (C) 2013-2015 Attila Molnar <attilamolnar@hush.com>
- *   Copyright (C) 2013, 2015, 2018-2019, 2021 Sadie Powell <sadie@witchery.services>
+ *   Copyright (C) 2013, 2015, 2018-2019, 2021-2022 Sadie Powell <sadie@witchery.services>
  *   Copyright (C) 2012-2013 ChrisTX <xpipe@hotmail.de>
  *   Copyright (C) 2012 Robby <robby@chatbelgie.be>
  *   Copyright (C) 2011, 2014, 2019 Adam <Adam@anope.org>
@@ -158,7 +158,7 @@ public:
 	DWORD GetErrorCode();
 
 private:
-	char szErrorString[500];
+	std::string szErrorString;
 	DWORD dwErrorCode;
 };
 
@@ -187,6 +187,14 @@ inline ssize_t writev(int fd, const WindowsIOVec* iov, int count)
 	if (ret == 0)
 		return sent;
 	return -1;
+}
+
+inline std::string GetErrorMessage(DWORD dwErrorCode)
+{
+	char szErrorString[1024];
+	if (FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, dwErrorCode, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)szErrorString, _countof(szErrorString), NULL) == 0)
+		sprintf_s(szErrorString, _countof(szErrorString), "Error code: %u", dwErrorCode);
+	return szErrorString;
 }
 
 // This wrapper is just so we don't need to do #ifdef _WIN32 everywhere in the socket code. It is

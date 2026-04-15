@@ -3,7 +3,7 @@
  *
  *   Copyright (C) 2019 linuxdaemon <linuxdaemon.irc@gmail.com>
  *   Copyright (C) 2015 Daniel Vassdal <shutter@canternet.org>
- *   Copyright (C) 2013-2014, 2016-2019 Sadie Powell <sadie@witchery.services>
+ *   Copyright (C) 2013-2014, 2016-2019, 2023 Sadie Powell <sadie@witchery.services>
  *   Copyright (C) 2013-2014, 2016 Attila Molnar <attilamolnar@hush.com>
  *   Copyright (C) 2012, 2019 Robby <robby@chatbelgie.be>
  *   Copyright (C) 2012, 2016 Adam <Adam@anope.org>
@@ -30,8 +30,9 @@
 
 /// $PackageInfo: require_system("arch") pkgconf sqlite
 /// $PackageInfo: require_system("centos") pkgconfig sqlite-devel
-/// $PackageInfo: require_system("darwin") pkg-config sqlite3
+/// $PackageInfo: require_system("darwin") pkg-config sqlite
 /// $PackageInfo: require_system("debian") libsqlite3-dev pkg-config
+/// $PackageInfo: require_system("rocky") pkgconfig sqlite-devel
 /// $PackageInfo: require_system("ubuntu") libsqlite3-dev pkg-config
 
 #include "inspircd.h"

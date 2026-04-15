@@ -2,11 +2,11 @@
  * InspIRCd -- Internet Relay Chat Daemon
  *
  *   Copyright (C) 2013-2014, 2016, 2018 Attila Molnar <attilamolnar@hush.com>
- *   Copyright (C) 2013, 2017-2019 Sadie Powell <sadie@witchery.services>
+ *   Copyright (C) 2013, 2017-2019, 2022 Sadie Powell <sadie@witchery.services>
  *   Copyright (C) 2012, 2019 Robby <robby@chatbelgie.be>
  *   Copyright (C) 2009-2010 Daniel De Graaf <danieldg@inspircd.org>
  *   Copyright (C) 2008 Robin Burchell <robin+git@viroteck.net>
- *   Copyright (C) 2007-2008, 2010 Craig Edwards <brain@inspircd.org>
+ *   Copyright (C) 2007-2008 Craig Edwards <brain@inspircd.org>
  *   Copyright (C) 2007, 2009 Dennis Friis <peavey@inspircd.org>
  *
  * This file is part of InspIRCd.  InspIRCd is free software: you can
@@ -64,6 +64,7 @@ class ModuleAuditorium
 	: public Module
 	, public Names::EventListener
 	, public Who::EventListener
+	, public Who::VisibleEventListener
 {
 	CheckExemption::EventProvider exemptionprov;
 	AuditoriumMode aum;
@@ -76,6 +77,7 @@ class ModuleAuditorium
 	ModuleAuditorium()
 		: Names::EventListener(this)
 		, Who::EventListener(this)
+		, Who::VisibleEventListener(this)
 		, exemptionprov(this)
 		, aum(this)
 		, joinhook(this)
@@ -192,6 +194,12 @@ class ModuleAuditorium
 		if (CanSee(source, memb))
 			return MOD_RES_PASSTHRU;
 		return MOD_RES_DENY;
+	}
+
+	ModResult OnWhoVisible(const Who::Request& request, LocalUser* source, Membership* memb) CXX11_OVERRIDE
+	{
+		// Never pick a channel as the first visible one if the channel is in auditorium mode.
+		return IsVisible(memb) || CanSee(source, memb) ? MOD_RES_PASSTHRU : MOD_RES_DENY;
 	}
 };
 

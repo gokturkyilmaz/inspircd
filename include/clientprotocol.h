@@ -1,7 +1,7 @@
 /*
  * InspIRCd -- Internet Relay Chat Daemon
  *
- *   Copyright (C) 2018-2020 Sadie Powell <sadie@witchery.services>
+ *   Copyright (C) 2018-2020, 2022-2023 Sadie Powell <sadie@witchery.services>
  *   Copyright (C) 2018 Attila Molnar <attilamolnar@hush.com>
  *
  * This file is part of InspIRCd.  InspIRCd is free software: you can
@@ -34,7 +34,7 @@ namespace ClientProtocol
 /** Contains a message parsed from wire format.
  * Used by Serializer::Parse().
  */
-struct ClientProtocol::ParseOutput
+struct CoreExport ClientProtocol::ParseOutput
 {
 	/** Command name, must not be empty.
 	 */
@@ -51,7 +51,7 @@ struct ClientProtocol::ParseOutput
 
 /** A selection of zero or more tags in a TagMap.
  */
-class ClientProtocol::TagSelection
+class CoreExport ClientProtocol::TagSelection
 {
 	std::bitset<64> selection;
 
@@ -90,10 +90,12 @@ class ClientProtocol::TagSelection
 	}
 };
 
-class ClientProtocol::MessageSource
+class CoreExport ClientProtocol::MessageSource
 {
+ protected:
 	User* sourceuser;
 	const std::string* sourcestr;
+	bool sourceowned:1;
 
  public:
 	/** Constructor, sets the source to be the full host of a user or sets it to be nothing.
@@ -102,8 +104,15 @@ class ClientProtocol::MessageSource
 	 * Optional, defaults to NULL.
 	 */
 	MessageSource(User* Sourceuser = NULL)
+		: sourceowned(false)
 	{
 		SetSourceUser(Sourceuser);
+	}
+
+	~MessageSource()
+	{
+		if (sourceowned && sourcestr)
+			delete sourcestr;
 	}
 
 	/** Constructor, sets the source to the supplied string and optionally sets the source user.
@@ -114,6 +123,7 @@ class ClientProtocol::MessageSource
 	 * Useful when the source string is synthesized but it is still related to a User.
 	 */
 	MessageSource(const std::string& Sourcestr, User* Sourceuser = NULL)
+		: sourceowned(false)
 	{
 		SetSource(Sourcestr, Sourceuser);
 	}
@@ -178,7 +188,7 @@ class ClientProtocol::MessageSource
  * All messages have a command name, a list of parameters and a map of tags, the last two can be empty.
  * They also always have a source, see class MessageSource.
  */
-class ClientProtocol::Message : public ClientProtocol::MessageSource
+class CoreExport ClientProtocol::Message : public ClientProtocol::MessageSource
 {
  public:
 	/** Contains information required to identify a specific version of a serialized message.
@@ -280,6 +290,11 @@ class ClientProtocol::Message : public ClientProtocol::MessageSource
 	};
 
 	typedef std::vector<Param> ParamList;
+
+	/** Escapes a value for use in a tag value.
+	 * @param value The value to escape.
+	 */
+	static std::string EscapeTag(const std::string& value);
 
  private:
 	typedef std::vector<std::pair<SerializedInfo, SerializedMessage> > SerializedList;
@@ -446,6 +461,12 @@ class ClientProtocol::Message : public ClientProtocol::MessageSource
 			if (!curr.IsOwned())
 				ReplaceParam(j, curr);
 		}
+
+		if (GetSource())
+		{
+			sourcestr = new std::string(*GetSource());
+			sourceowned = true;
+		}
 	}
 
 	void SetSideEffect(bool Sideeffect) { sideeffect = Sideeffect; }
@@ -461,7 +482,7 @@ class ClientProtocol::Message : public ClientProtocol::MessageSource
  *
  * Event hooks attached to a specific event can alter the messages sent for that event.
  */
-class ClientProtocol::Event
+class CoreExport ClientProtocol::Event
 {
 	EventProvider* event;
 	Message* initialmsg;
@@ -518,7 +539,7 @@ class ClientProtocol::Event
 	void GetMessagesForUser(LocalUser* user, MessageList& messagelist);
 };
 
-class ClientProtocol::MessageTagEvent
+class CoreExport ClientProtocol::MessageTagEvent
 	: public Events::ModuleEventProvider
 {
  public:
@@ -533,7 +554,7 @@ class ClientProtocol::MessageTagEvent
  * with tags before the message is sent and they have the job of determining whether a user should
  * get a message tag or be allowed to send one.
  */
-class ClientProtocol::MessageTagProvider : public Events::ModuleEventListener
+class CoreExport ClientProtocol::MessageTagProvider : public Events::ModuleEventListener
 {
  public:
 	/** Constructor.
@@ -580,7 +601,7 @@ class ClientProtocol::MessageTagProvider : public Events::ModuleEventListener
  * A protocol event hook is attached to a single event type. It has the ability to alter or block messages
  * sent to users which belong to the event the hook is attached to.
  */
-class ClientProtocol::EventHook : public Events::ModuleEventListener
+class CoreExport ClientProtocol::EventHook : public Events::ModuleEventListener
 {
  public:
 	static std::string GetEventName(const std::string& name)
@@ -624,7 +645,7 @@ class ClientProtocol::EventHook : public Events::ModuleEventListener
  * Protocol event hooks can be attached to the instances of these providers. The core has event
  * providers for most common IRC events defined in RFC1459.
  */
-class ClientProtocol::EventProvider : public Events::ModuleEventProvider
+class CoreExport ClientProtocol::EventProvider : public Events::ModuleEventProvider
 {
  public:
 	/** Constructor.
@@ -641,7 +662,7 @@ class ClientProtocol::EventProvider : public Events::ModuleEventProvider
 /** Commonly used client protocol events.
  * Available via InspIRCd::GetRFCEvents().
  */
-struct ClientProtocol::RFCEvents
+struct CoreExport ClientProtocol::RFCEvents
 {
 	EventProvider numeric;
 	EventProvider join;
@@ -695,7 +716,7 @@ class CoreExport ClientProtocol::Serializer : public DataProvider
 	 * @param mod Module owning the serializer.
 	 * @param Name Name of the serializer, e.g. "rfc".
 	 */
-	Serializer(Module* mod, const char* Name);
+	Serializer(Module* mod, const std::string& Name);
 
 	/** Handle a tag in a message being parsed. Call this method for each parsed tag.
 	 * @param user User sending the tag.

@@ -4,13 +4,13 @@
  *   Copyright (C) 2021 Molly Miller
  *   Copyright (C) 2020 Matt Schatz <genius3000@g3k.solutions>
  *   Copyright (C) 2019 linuxdaemon <linuxdaemon.irc@gmail.com>
- *   Copyright (C) 2013, 2017-2021 Sadie Powell <sadie@witchery.services>
+ *   Copyright (C) 2013, 2017-2023 Sadie Powell <sadie@witchery.services>
  *   Copyright (C) 2012-2016 Attila Molnar <attilamolnar@hush.com>
  *   Copyright (C) 2012 Robby <robby@chatbelgie.be>
  *   Copyright (C) 2010 Adam <Adam@anope.org>
  *   Copyright (C) 2009-2010 Daniel De Graaf <danieldg@inspircd.org>
  *   Copyright (C) 2007 Dennis Friis <peavey@inspircd.org>
- *   Copyright (C) 2006-2007, 2009-2010 Craig Edwards <brain@inspircd.org>
+ *   Copyright (C) 2006-2007, 2009 Craig Edwards <brain@inspircd.org>
  *
  * This file is part of InspIRCd.  InspIRCd is free software: you can
  * redistribute it and/or modify it under the terms of the GNU General Public
@@ -201,7 +201,7 @@ class CommandSSLInfo : public SplitCommand
 
 		if (!source->IsOper() && chan->GetPrefixValue(source) < OP_VALUE)
 		{
-			source->WriteNumeric(ERR_CHANOPRIVSNEEDED, chan->name, "You must be a channel operator.");
+			source->WriteNumeric(Numerics::ChannelPrivilegesNeeded(chan, OP_VALUE, "view TLS (SSL) client certificate information"));
 			return CMD_FAILURE;
 		}
 
@@ -253,6 +253,7 @@ class ModuleSSLInfo
  private:
 	CommandSSLInfo cmd;
 	std::string hash;
+	unsigned long warnexpiring;
 
 	bool MatchFP(ssl_cert* const cert, const std::string& fp) const
 	{
@@ -273,6 +274,7 @@ class ModuleSSLInfo
 		ConfigTag* tag = ServerInstance->Config->ConfValue("sslinfo");
 		cmd.operonlyfp = tag->getBool("operonly");
 		hash = tag->getString("hash");
+		warnexpiring = tag->getDuration("warnexpiring", 0, 0, 60*60*24*365);
 	}
 
 	Version GetVersion() CXX11_OVERRIDE
@@ -385,6 +387,19 @@ class ModuleSSLInfo
 
 			if (do_login)
 				user->Oper(ifo);
+		}
+
+		if (!warnexpiring || !cert->GetExpirationTime())
+			return;
+
+		if (ServerInstance->Time() > cert->GetExpirationTime())
+		{
+			user->WriteNotice("*** Your TLS (SSL) client certificate has expired.");
+		}
+		else if (static_cast<time_t>(ServerInstance->Time() + warnexpiring) > cert->GetExpirationTime())
+		{
+			const std::string duration = InspIRCd::DurationString(cert->GetExpirationTime() - ServerInstance->Time());
+			user->WriteNotice("*** Your TLS (SSL) client certificate expires in " + duration + ".");
 		}
 	}
 

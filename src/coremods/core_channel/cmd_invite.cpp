@@ -1,17 +1,16 @@
 /*
  * InspIRCd -- Internet Relay Chat Daemon
  *
- *   Copyright (C) 2018, 2020 Sadie Powell <sadie@witchery.services>
+ *   Copyright (C) 2018, 2020, 2022 Sadie Powell <sadie@witchery.services>
  *   Copyright (C) 2018 linuxdaemon <linuxdaemon.irc@gmail.com>
  *   Copyright (C) 2017 B00mX0r <b00mx0r@aureus.pw>
  *   Copyright (C) 2013-2016, 2018 Attila Molnar <attilamolnar@hush.com>
  *   Copyright (C) 2012, 2019 Robby <robby@chatbelgie.be>
  *   Copyright (C) 2009-2010 Daniel De Graaf <danieldg@inspircd.org>
- *   Copyright (C) 2009 Uli Schlachter <psychon@inspircd.org>
  *   Copyright (C) 2008 Thomas Stagner <aquanight@inspircd.org>
  *   Copyright (C) 2007-2008 Robin Burchell <robin+git@viroteck.net>
  *   Copyright (C) 2007 Dennis Friis <peavey@inspircd.org>
- *   Copyright (C) 2005-2008, 2010 Craig Edwards <brain@inspircd.org>
+ *   Copyright (C) 2005-2008 Craig Edwards <brain@inspircd.org>
  *
  * This file is part of InspIRCd.  InspIRCd is free software: you can
  * redistribute it and/or modify it under the terms of the GNU General Public
@@ -127,10 +126,7 @@ CmdResult CommandInvite::Handle(User* user, const Params& parameters)
 				unsigned int rank = c->GetPrefixValue(user);
 				if (rank < HALFOP_VALUE)
 				{
-					// Check whether halfop mode is available and phrase error message accordingly
-					ModeHandler* mh = ServerInstance->Modes->FindMode('h', MODETYPE_CHANNEL);
-					user->WriteNumeric(ERR_CHANOPRIVSNEEDED, c->name, InspIRCd::Format("You must be a channel %soperator",
-						(mh && mh->name == "halfop" ? "half-" : "")));
+					user->WriteNumeric(Numerics::ChannelPrivilegesNeeded(c, HALFOP_VALUE, "send an invite"));
 					return CMD_FAILURE;
 				}
 			}
@@ -153,7 +149,7 @@ CmdResult CommandInvite::Handle(User* user, const Params& parameters)
 
 		char prefix = 0;
 		unsigned int minrank = 0;
-		switch (announceinvites)
+		switch (invapi.announceinvites)
 		{
 			case Invite::ANNOUNCE_OPS:
 			{
@@ -161,25 +157,31 @@ CmdResult CommandInvite::Handle(User* user, const Params& parameters)
 				minrank = OP_VALUE;
 				break;
 			}
+
 			case Invite::ANNOUNCE_DYNAMIC:
 			{
-				PrefixMode* mh = ServerInstance->Modes->FindPrefixMode('h');
-				if ((mh) && (mh->name == "halfop"))
+				PrefixMode* mh = ServerInstance->Modes.FindNearestPrefixMode(HALFOP_VALUE);
+				if (mh)
 				{
 					prefix = mh->GetPrefix();
 					minrank = mh->GetPrefixRank();
 				}
+				else
+				{
+					prefix = '@';
+					minrank = OP_VALUE;
+				}
 				break;
 			}
+
 			default:
-			{
-			}
+				break;
 		}
 
 		CUList excepts;
 		FOREACH_MOD(OnUserInvite, (user, u, c, timeout, minrank, excepts));
 
-		if (announceinvites != Invite::ANNOUNCE_NONE)
+		if (invapi.announceinvites != Invite::ANNOUNCE_NONE)
 		{
 			excepts.insert(user);
 			ClientProtocol::Messages::Privmsg privmsg(ServerInstance->FakeClient, c, InspIRCd::Format("*** %s invited %s into the channel", user->nick.c_str(), u->nick.c_str()), MSG_NOTICE);

@@ -3,7 +3,7 @@
 # InspIRCd -- Internet Relay Chat Daemon
 #
 #   Copyright (C) 2020 Nicole Kleinhoff <ilbelkyr@shalture.org>
-#   Copyright (C) 2013-2017, 2020-2021 Sadie Powell <sadie@witchery.services>
+#   Copyright (C) 2013-2017, 2020-2022 Sadie Powell <sadie@witchery.services>
 #
 # This file is part of InspIRCd.  InspIRCd is free software: you can
 # redistribute it and/or modify it under the terms of the GNU General Public
@@ -56,7 +56,7 @@ if (scalar @ARGV < 1 || $ARGV[0] !~ /^(?:auto|gnutls|openssl)$/i) {
 my $certtool = $^O eq 'darwin' ? 'gnutls-certtool' : 'certtool';
 
 # Check whether the user has the required tools installed.
-my $has_gnutls = `$certtool --version v 2>/dev/null`;
+my $has_gnutls = `$certtool --version=v 2>/dev/null`;
 my $has_openssl = !system 'openssl version >/dev/null 2>&1';
 
 # The framework the user has specified.

@@ -222,6 +222,10 @@ Your client should send this to answer server PINGs. You
 should not issue this command manually.
 ">
 
+<helpop key="prop" title="/PROP <target> [(+|-)<name> [<value>]]+" value="
+Allows users to add, remove, and view the modes of a specific target.
+">
+
 <helpop key="admin" title="/ADMIN [<servername>]" value="
 Shows the administrative information for the given server.
 ">
@@ -298,6 +302,8 @@ The following flags use <pattern> to match against the specified user data:
 
  A     Show users who have an away message matching <pattern>.
  a     Show users who have an account name matching <pattern>.
+ G     Show users who are connecting from a country code matching <pattern>.
+       Requires the geoban module.
  h     Show users who have a hostname matching <pattern>. If the 'x' modifier
        is specified then this will match against the real hostname instead of
        the display hostname.
@@ -419,9 +425,11 @@ server.
 You should not use it during an established connection.
 ">
 
-<helpop key="whowas" title="/WHOWAS <nick>" value="
+<helpop key="whowas" title="/WHOWAS <nick> [<count>]" value="
 Returns a list of times the user was seen recently on IRC along with
 the time they were last seen and their server.
+
+If <count> is given, only return the <count> most recent entries.
 ">
 
 <helpop key="links" title="/LINKS" value="
@@ -676,7 +684,7 @@ Changes the real name of the user to the specified real name.
 Changes the ident of the user to the specified ident.
 ">
 
-<helpop key="shun" title="/SHUN <nick!user@host> [<duration> :<reason>]" value="
+<helpop key="shun" title="/SHUN <nick!user@host>[,<nick!user@host>]+ [<duration> :<reason>]" value="
 Sets or removes a shun (global server-side ignore) on a nick!user@host mask.
 You must specify all three parameters to add a shun, and one parameter
 to remove a shun (just the nick!user@host).
@@ -749,7 +757,7 @@ Unloads a module from all linked servers.
 Unloads and reloads a module on all linked servers.
 ">
 
-<helpop key="kline" title="/KLINE <user@host> [<duration> :<reason>]" value="
+<helpop key="kline" title="/KLINE <user@host>[,<user@host>]+ [<duration> :<reason>]" value="
 Sets or removes a K-line (local user@host based ban) on a user@host mask.
 You must specify all three parameters to add a ban, and one parameter
 to remove a ban (just the user@host).
@@ -759,7 +767,7 @@ The duration may be specified in seconds, or in the format
 five minutes and six seconds. All fields in this format are optional.
 ">
 
-<helpop key="zline" title="/ZLINE <ipmask> [<duration> :<reason>]" value="
+<helpop key="zline" title="/ZLINE <ipmask>[,<ipmask>]+ [<duration> :<reason>]" value="
 Sets or removes a Z-line (global IP based ban) on an IP mask.
 You must specify all three parameters to add a ban, and one parameter
 to remove a ban (just the ipmask).
@@ -769,7 +777,7 @@ The duration may be specified in seconds, or in the format
 five minutes and six seconds. All fields in this format are optional.
 ">
 
-<helpop key="qline" title="/QLINE <nickmask> [<duration> :<reason>]" value="
+<helpop key="qline" title="/QLINE <nickmask>[,<nickmask>]+ [<duration> :<reason>]" value="
 Sets or removes a Q-line (global nick based ban) on a nick mask.
 You must specify all three parameters to add a ban, and one parameter
 to remove a ban (just the nickmask).
@@ -779,7 +787,7 @@ The duration may be specified in seconds, or in the format
 five minutes and six seconds. All fields in this format are optional.
 ">
 
-<helpop key="gline" title="/GLINE <user@host> [<duration> :<reason>]" value="
+<helpop key="gline" title="/GLINE <user@host>[,<user@host>]+ [<duration> :<reason>]" value="
 Sets or removes a G-line (global user@host based ban) on a user@host mask.
 You must specify all three parameters to add a ban, and one
 parameter to remove a ban (just the user@host).
@@ -789,7 +797,7 @@ The duration may be specified in seconds, or in the format
 five minutes and six seconds. All fields in this format are optional.
 ">
 
-<helpop key="eline" title="/ELINE <user@host> [<duration> :<reason>]" value="
+<helpop key="eline" title="/ELINE <user@host>[,<user@host>]+ [<duration> :<reason>]" value="
 Sets or removes a E-line (global user@host ban exception) on a user@host mask.
 You must specify at least 3 parameters to add an exception, and one
 parameter to remove an exception (just the user@host).
@@ -928,12 +936,11 @@ using their cloak when they quit.
                     can speak.
  n                  Blocks users who are not members of the channel
                     from messaging it.
- p                  Make channel private, hiding it in users' whoises
-                    and replacing it with * in /LIST.
+ p                  Hides the channel in /WHOIS from people who are not a member.
+                    You probably want the s (secret) channel mode rather than this.
  r                  Marks the channel as registered with Services
                     (requires the services account module).
- s                  Make channel secret, hiding it in users' whoises
-                    and /LIST.
+ s                  Hides the channel in /WHOIS and /LIST from people who are not a member.
  t                  Prevents users without +h or +o from changing the
                     topic.
  u                  Makes the channel an auditorium; normal users only

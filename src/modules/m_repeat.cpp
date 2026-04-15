@@ -6,7 +6,7 @@
  *   Copyright (C) 2019 Robby <robby@chatbelgie.be>
  *   Copyright (C) 2018-2019 linuxdaemon <linuxdaemon.irc@gmail.com>
  *   Copyright (C) 2018 Matt Schatz <genius3000@g3k.solutions>
- *   Copyright (C) 2017-2019, 2021 Sadie Powell <sadie@witchery.services>
+ *   Copyright (C) 2017-2019, 2021-2022 Sadie Powell <sadie@witchery.services>
  *   Copyright (C) 2015 James Lu <GLolol@overdrivenetworks.com>
  *   Copyright (C) 2013-2015 Attila Molnar <attilamolnar@hush.com>
  *   Copyright (C) 2013 Daniel Vassdal <shutter@canternet.org>
@@ -134,7 +134,7 @@ class RepeatMode : public ParamMode<RepeatMode, SimpleExtItem<ChannelSettings> >
 		: ParamMode<RepeatMode, SimpleExtItem<ChannelSettings> >(Creator, "repeat", 'E')
 		, MemberInfoExt("repeat_memb", ExtensionItem::EXT_MEMBERSHIP, Creator)
 	{
-		syntax = "[~|*]<lines>:<sec>[:<difference>][:<backlog>]";
+		syntax = "[~|*]<lines>:<duration>[:<difference>][:<backlog>]";
 	}
 
 	void OnUnset(User* source, Channel* chan) CXX11_OVERRIDE

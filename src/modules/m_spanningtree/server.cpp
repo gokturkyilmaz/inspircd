@@ -1,7 +1,7 @@
 /*
  * InspIRCd -- Internet Relay Chat Daemon
  *
- *   Copyright (C) 2013, 2017-2020 Sadie Powell <sadie@witchery.services>
+ *   Copyright (C) 2013, 2017-2020, 2022 Sadie Powell <sadie@witchery.services>
  *   Copyright (C) 2012-2016 Attila Molnar <attilamolnar@hush.com>
  *   Copyright (C) 2012, 2019 Robby <robby@chatbelgie.be>
  *   Copyright (C) 2009-2010 Daniel De Graaf <danieldg@inspircd.org>
@@ -141,7 +141,8 @@ Link* TreeSocket::AuthRemote(const CommandBase::Params& params)
 			ssliohook->GetCiphersuite(ciphersuite);
 			ServerInstance->SNO->WriteToSnoMask('l', "Negotiated ciphersuite %s on link %s", ciphersuite.c_str(), x->Name.c_str());
 		}
-		else if (!irc::sockets::cidr_mask("127.0.0.0/8").match(capab->remotesa) && !irc::sockets::cidr_mask("::1/128").match(capab->remotesa))
+		else if ((capab->remotesa.family() == AF_INET && !irc::sockets::cidr_mask("127.0.0.0/8").match(capab->remotesa))
+			|| (capab->remotesa.family() == AF_INET6 && !irc::sockets::cidr_mask("::1/128").match(capab->remotesa)))
 		{
 			ServerInstance->SNO->WriteGlobalSno('l', "Server connection to %s is not using SSL (TLS). This is VERY INSECURE and will not be allowed in the next major version of InspIRCd.", x->Name.c_str());
 		}

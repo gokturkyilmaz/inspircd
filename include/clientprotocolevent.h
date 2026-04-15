@@ -1,7 +1,7 @@
 /*
  * InspIRCd -- Internet Relay Chat Daemon
  *
- *   Copyright (C) 2018 Sadie Powell <sadie@witchery.services>
+ *   Copyright (C) 2018, 2022 Sadie Powell <sadie@witchery.services>
  *   Copyright (C) 2018 Attila Molnar <attilamolnar@hush.com>
  *
  * This file is part of InspIRCd.  InspIRCd is free software: you can
@@ -29,7 +29,7 @@ namespace ClientProtocol
 	}
 }
 
-struct ClientProtocol::Events::Join : public ClientProtocol::Messages::Join, public ClientProtocol::Event
+struct CoreExport ClientProtocol::Events::Join : public ClientProtocol::Messages::Join, public ClientProtocol::Event
 {
 	Join()
 		: ClientProtocol::Event(ServerInstance->GetRFCEvents().join, *this)
@@ -49,7 +49,7 @@ struct ClientProtocol::Events::Join : public ClientProtocol::Messages::Join, pub
 	}
 };
 
-class ClientProtocol::Events::Mode : public ClientProtocol::Event
+class CoreExport ClientProtocol::Events::Mode : public ClientProtocol::Event
 {
 	std::list<ClientProtocol::Messages::Mode> modelist;
 	std::vector<Message*> modemsgplist;

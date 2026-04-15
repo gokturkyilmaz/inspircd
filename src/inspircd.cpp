@@ -1,22 +1,22 @@
 /*
  * InspIRCd -- Internet Relay Chat Daemon
  *
- *   Copyright (C) 2021 Valentin Lorentz <progval+git@progval.net>
+ *   Copyright (C) 2021 Val Lorentz <progval+git@progval.net>
  *   Copyright (C) 2020 Matt Schatz <genius3000@g3k.solutions>
  *   Copyright (C) 2018 Chris Novakovic
- *   Copyright (C) 2013, 2017-2021 Sadie Powell <sadie@witchery.services>
+ *   Copyright (C) 2013, 2017-2023 Sadie Powell <sadie@witchery.services>
  *   Copyright (C) 2013 Adam <Adam@anope.org>
  *   Copyright (C) 2012-2014, 2016, 2018 Attila Molnar <attilamolnar@hush.com>
  *   Copyright (C) 2012-2013 ChrisTX <xpipe@hotmail.de>
  *   Copyright (C) 2012 Robby <robby@chatbelgie.be>
  *   Copyright (C) 2012 Ariadne Conill <ariadne@dereferenced.org>
  *   Copyright (C) 2009-2010 Daniel De Graaf <danieldg@inspircd.org>
- *   Copyright (C) 2008-2009 Uli Schlachter <psychon@inspircd.org>
+ *   Copyright (C) 2008 Uli Schlachter <psychon@inspircd.org>
  *   Copyright (C) 2008 Thomas Stagner <aquanight@inspircd.org>
  *   Copyright (C) 2007-2008 Robin Burchell <robin+git@viroteck.net>
  *   Copyright (C) 2007 Dennis Friis <peavey@inspircd.org>
  *   Copyright (C) 2006-2007 Oliver Lupton <om@inspircd.org>
- *   Copyright (C) 2005-2010 Craig Edwards <brain@inspircd.org>
+ *   Copyright (C) 2005-2009 Craig Edwards <brain@inspircd.org>
  *
  * This file is part of InspIRCd.  InspIRCd is free software: you can
  * redistribute it and/or modify it under the terms of the GNU General Public
@@ -167,20 +167,20 @@ namespace
 			if (setgroups(0, NULL) == -1)
 			{
 				ServerInstance->Logs->Log("STARTUP", LOG_DEFAULT, "setgroups() failed (wtf?): %s", strerror(errno));
-				exit(EXIT_STATUS_CONFIG);
+				InspIRCd::QuickExit(EXIT_STATUS_CONFIG);
 			}
 
 			struct group* g = getgrnam(SetGroup.c_str());
 			if (!g)
 			{
 				ServerInstance->Logs->Log("STARTUP", LOG_DEFAULT, "getgrnam(%s) failed (wrong group?): %s", SetGroup.c_str(), strerror(errno));
-				exit(EXIT_STATUS_CONFIG);
+				InspIRCd::QuickExit(EXIT_STATUS_CONFIG);
 			}
 
 			if (setgid(g->gr_gid) == -1)
 			{
 				ServerInstance->Logs->Log("STARTUP", LOG_DEFAULT, "setgid(%d) failed (wrong group?): %s", g->gr_gid, strerror(errno));
-				exit(EXIT_STATUS_CONFIG);
+				InspIRCd::QuickExit(EXIT_STATUS_CONFIG);
 			}
 		}
 
@@ -192,13 +192,13 @@ namespace
 			if (!u)
 			{
 				ServerInstance->Logs->Log("STARTUP", LOG_DEFAULT, "getpwnam(%s) failed (wrong user?): %s", SetUser.c_str(), strerror(errno));
-				exit(EXIT_STATUS_CONFIG);
+				InspIRCd::QuickExit(EXIT_STATUS_CONFIG);
 			}
 
 			if (setuid(u->pw_uid) == -1)
 			{
 				ServerInstance->Logs->Log("STARTUP", LOG_DEFAULT, "setuid(%d) failed (wrong user?): %s", u->pw_uid, strerror(errno));
-				exit(EXIT_STATUS_CONFIG);
+				InspIRCd::QuickExit(EXIT_STATUS_CONFIG);
 			}
 		}
 #endif
@@ -262,7 +262,7 @@ namespace
 			// happened and the parent should exit.
 			while (kill(childpid, 0) != -1)
 				sleep(1);
-			exit(EXIT_STATUS_NOERROR);
+			InspIRCd::QuickExit(EXIT_STATUS_NOERROR);
 		}
 		else
 		{
@@ -392,14 +392,14 @@ namespace
 			std::cout << con_bright << "Hints:" << con_reset << std::endl
 				<< "- For TCP/IP listeners try using a public IP address in <bind:address> instead" << std::endl
 				<< "  of * or leaving it blank." << std::endl
-				<< "- For UNIX socket listeners try enabling <bind:rewrite> to replace old sockets." << std::endl;
+				<< "- For UNIX socket listeners try enabling <bind:replace> to replace old sockets." << std::endl;
 		}
 	}
 
 	// Required for returning the proper value of EXIT_SUCCESS for the parent process.
 	void VoidSignalHandler(int)
 	{
-		exit(EXIT_STATUS_NOERROR);
+		InspIRCd::QuickExit(EXIT_STATUS_NOERROR);
 	}
 }
 
@@ -619,7 +619,8 @@ InspIRCd::InspIRCd(int argc, char** argv)
 	WritePID(Config->PID);
 	DropRoot();
 
-	Logs->Log("STARTUP", LOG_DEFAULT, "Startup complete as '%s'[%s], %lu max open sockets", Config->ServerName.c_str(),Config->GetSID().c_str(), SocketEngine::GetMaxFds());
+	Logs->Log("STARTUP", LOG_DEFAULT, "Startup complete as '%s'[%s], %lu max open sockets", Config->ServerName.c_str(),
+		Config->GetSID().c_str(), (unsigned long)SocketEngine::GetMaxFds());
 }
 
 void InspIRCd::UpdateTime()
@@ -663,12 +664,13 @@ void InspIRCd::Run()
 
 		UpdateTime();
 
-		/* Run background module timers every few seconds
-		 * (the docs say modules should not rely on accurate
-		 * timing using this event, so we dont have to
-		 * time this exactly).
-		 */
+		// Normally we want to limit the mainloop to processing data
+		// once a second but this can cause problems with testing
+		// software like irctest. Don't define this unless you know
+		// what you are doing.
+#ifndef INSPIRCD_UNLIMITED_MAINLOOP
 		if (TIME.tv_sec != OLDTIME)
+#endif
 		{
 			CollectStats();
 			CheckTimeSkip(OLDTIME, TIME.tv_sec);

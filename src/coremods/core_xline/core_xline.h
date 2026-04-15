@@ -3,7 +3,7 @@
  *
  *   Copyright (C) 2019 Robby <robby@chatbelgie.be>
  *   Copyright (C) 2019 Matt Schatz <genius3000@g3k.solutions>
- *   Copyright (C) 2017-2018 Sadie Powell <sadie@witchery.services>
+ *   Copyright (C) 2017-2018, 2022 Sadie Powell <sadie@witchery.services>
  *   Copyright (C) 2014 Attila Molnar <attilamolnar@hush.com>
  *
  * This file is part of InspIRCd.  InspIRCd is free software: you can
@@ -65,7 +65,7 @@ class InsaneBan
 	 * @param confkey Name of the config key (inside the insane tag) which if false disables any checking
 	 * @return True if the given mask matches too many users, false if not
 	 */
-	static bool MatchesEveryone(const std::string& mask, MatcherBase& test, User* user, const char* bantype, const char* confkey);
+	static bool MatchesEveryone(const std::string& mask, MatcherBase& test, User* user, char bantype, const char* confkey);
 };
 
 /** Handle /ELINE.

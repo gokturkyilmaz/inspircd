@@ -2,11 +2,9 @@
  * InspIRCd -- Internet Relay Chat Daemon
  *
  *   Copyright (C) 2018 linuxdaemon <linuxdaemon.irc@gmail.com>
- *   Copyright (C) 2013, 2018 Sadie Powell <sadie@witchery.services>
+ *   Copyright (C) 2013, 2018, 2022 Sadie Powell <sadie@witchery.services>
  *   Copyright (C) 2012-2014, 2018 Attila Molnar <attilamolnar@hush.com>
  *   Copyright (C) 2012, 2019 Robby <robby@chatbelgie.be>
- *   Copyright (C) 2010 Craig Edwards <brain@inspircd.org>
- *   Copyright (C) 2009 Uli Schlachter <psychon@inspircd.org>
  *   Copyright (C) 2009 Daniel De Graaf <danieldg@inspircd.org>
  *   Copyright (C) 2008 Thomas Stagner <aquanight@inspircd.org>
  *   Copyright (C) 2008 Robin Burchell <robin+git@viroteck.net>
@@ -38,20 +36,20 @@ class ModuleChanLog : public Module
  public:
 	void ReadConfig(ConfigStatus& status) CXX11_OVERRIDE
 	{
-		std::string snomasks;
-		std::string channel;
 		ChanLogTargets newlogs;
 
 		ConfigTagList tags = ServerInstance->Config->ConfTags("chanlog");
 		for (ConfigIter i = tags.first; i != tags.second; ++i)
 		{
-			channel = i->second->getString("channel");
-			snomasks = i->second->getString("snomasks");
+			ConfigTag* tag = i->second;
 
-			if (channel.empty() || snomasks.empty())
-			{
-				throw ModuleException("Malformed chanlog tag at " + i->second->getTagLocation());
-			}
+			const std::string channel = tag->getString("channel");
+			if (!ServerInstance->IsChannel(channel))
+				throw ModuleException("<chanlog:channel> must be set to a channel name, at " + tag->getTagLocation());
+
+			const std::string snomasks = tag->getString("snomasks");
+			if (snomasks.empty())
+				throw ModuleException("<chanlog:snomasks> must not be empty, at " + tag->getTagLocation());
 
 			for (std::string::const_iterator it = snomasks.begin(); it != snomasks.end(); it++)
 			{
@@ -59,8 +57,8 @@ class ModuleChanLog : public Module
 				ServerInstance->Logs->Log(MODNAME, LOG_DEFAULT, "Logging %c to %s", *it, channel.c_str());
 			}
 		}
-		logstreams.swap(newlogs);
 
+		logstreams.swap(newlogs);
 	}
 
 	ModResult OnSendSnotice(char &sno, std::string &desc, const std::string &msg) CXX11_OVERRIDE
@@ -76,7 +74,7 @@ class ModuleChanLog : public Module
 			Channel *c = ServerInstance->FindChan(it->second);
 			if (c)
 			{
-				ClientProtocol::Messages::Privmsg privmsg(ClientProtocol::Messages::Privmsg::nocopy, ServerInstance->Config->ServerName, c, snotice);
+				ClientProtocol::Messages::Privmsg privmsg(ClientProtocol::Messages::Privmsg::nocopy, ServerInstance->FakeClient, c, snotice);
 				c->Write(ServerInstance->GetRFCEvents().privmsg, privmsg);
 				ServerInstance->PI->SendMessage(c, 0, snotice);
 			}

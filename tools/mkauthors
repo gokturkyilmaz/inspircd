@@ -2,7 +2,7 @@
 #
 # InspIRCd -- Internet Relay Chat Daemon
 #
-#   Copyright (C) 2021 Sadie Powell <sadie@witchery.services>
+#   Copyright (C) 2021-2022 Sadie Powell <sadie@witchery.services>
 #
 # This file is part of InspIRCd.  InspIRCd is free software: you can
 # redistribute it and/or modify it under the terms of the GNU General Public
@@ -31,8 +31,9 @@ use make::common;
 use make::console;
 
 my %authors;
-for my $author (split /\n+/, `git log --pretty='%aN <%aE>' HEAD`) {
+for my $author (split /\n+/, `git log --pretty='%aN <%aE>%n%(trailers:key=Co-Authored-By,valueonly)' HEAD`) {
 	$author = $1 if $author =~ /^(.+) <(?:unknown\@email.invalid|\S+\@users.noreply.github.com)>$/;
+	next if $author =~ /\[bot\]$/;
 
 	$authors{$author} ||= 0;
 	$authors{$author} += 1;
@@ -44,10 +45,9 @@ say $fh <<"EOH";
 Since the first commit in January 2003 ${\scalar %authors} people have submitted patches,
 commits, and other useful contributions to InspIRCd. These people, ordered by
 the number of contributions they have made, are:
-
 EOH
 
-for my $author (sort { $authors{$b} <=> $authors{$a} or $a cmp $b } keys %authors) {
+for my $author (sort { $authors{$b} <=> $authors{$a} or lc($a) cmp lc($b) } keys %authors) {
 	next if $author eq 'InspIRCd Robot <noreply@inspircd.org>';
 	say $fh "  * $author";
 }
