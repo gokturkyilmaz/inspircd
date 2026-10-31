@@ -106,6 +106,15 @@ public:
 		}
 		else
 		{
+			// If the target is not an online user and is a bare word (i.e. not a
+			// wildcard, a nick!user@host mask, or an IP/CIDR) then it is a literal
+			// nickname which can never match anyone.
+			if (!find && target.find_first_of("*?!@.:/") == std::string::npos)
+			{
+				user->WriteNotice("*** Target not found.");
+				return CmdResult::FAILURE;
+			}
+
 			// Adding - XXX todo make this respect <insane> tag perhaps..
 			unsigned long duration;
 			std::string expr;
